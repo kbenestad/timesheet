@@ -1,0 +1,197 @@
+# =============================================================================
+# Timesheet App — Configuration
+# =============================================================================
+
+organization: "Center for Asylum Protection"
+logo: yes
+logo-maxwidth: 4
+page-size: A4
+font-body: Helvetica
+font-heading: Helvetica
+font-size: 10
+accent-colour: "#1a3a5c"
+footer: "Confidential"
+muted-background: yes
+
+work-week: [Mon, Tue, Wed, Thu, Fri]
+work-day-start: "09:00"
+work-day-end: "17:00"
+
+holidays:
+  - date: "2025-01-01"
+    display-en: "New Year's Day"
+    display-vi: "Tết Dương lịch"
+
+codes:
+  - code: NON
+    display-en: "Non-working day"
+    display-vi: "Ngày không làm việc"
+    counthours: no
+    lockstate: locked
+    employee-types: [hourly]
+    colour-border: "#393939"
+    colour-bg: "#d7d7d7"
+
+  - code: REG
+    display-en: "Regular"
+    display-vi: "Thường"
+    counthours: yes
+    lockstate: unlocked
+    employee-types: [salaried, hourly]
+    colour-border: "#0078d7"
+    colour-bg: "#cce4f7"
+    hint-en: "Please describe your activities"
+    hint-vi: "Vui lòng mô tả hoạt động của bạn"
+
+  - code: PPT
+    display-en: "PPT"
+    display-vi: "Nghỉ phép"
+    counthours: yes
+    lockstate: locked
+    employee-types: [salaried, hourly]
+    colour-border-fullday: "#ed616f"
+    colour-bg-fullday: "#ffd9d9"
+    colour-border-partialday: "#ffb900"
+    colour-bg-partialday: "#fff1cc"
+
+  - code: OTH
+    display-en: "Other paid leave"
+    display-vi: "Nghỉ có lương khác"
+    counthours: yes
+    lockstate: unlocked
+    employee-types: [salaried, hourly]
+    colour-border: "#a4252c"
+    colour-bg: "#edd4d5"
+    hint-en: "Please enter type of leave"
+    hint-vi: "Vui lòng nhập loại nghỉ phép"
+
+  - code: UNP
+    display-en: "Unpaid leave"
+    display-vi: "Nghỉ không lương"
+    counthours: yes
+    lockstate: locked
+    employee-types: [salaried]
+    colour-border: "#393939"
+    colour-bg: "#d7d7d7"
+
+  - code: HOL
+    display-en: "Holiday"
+    display-vi: "Ngày lễ"
+    counthours: yes
+    lockstate: locked
+    employee-types: [salaried, hourly]
+    colour-border: "#8cbd18"
+    colour-bg: "#e8f2d1"
+
+languages:
+  - code: en
+    display: "English"
+  - code: vi
+    display: "Tiếng Việt"
+
+ui-strings:
+  employee-type-label:
+    en: "Employee type"
+    vi: "Loại nhân viên"
+  option-salaried:
+    en: "Salaried"
+    vi: "Lương tháng"
+  option-hourly:
+    en: "Hourly"
+    vi: "Lương giờ"
+  language-label:
+    en: "Language"
+    vi: "Ngôn ngữ"
+  period-label:
+    en: "Period"
+    vi: "Kỳ"
+  employee-label:
+    en: "Employee"
+    vi: "Nhân viên"
+  col-date:
+    en: "Date"
+    vi: "Ngày"
+  col-time-in:
+    en: "Time in"
+    vi: "Giờ vào"
+  col-time-out:
+    en: "Time out"
+    vi: "Giờ ra"
+  col-code:
+    en: "Code"
+    vi: "Mã"
+  col-description:
+    en: "Description"
+    vi: "Mô tả"
+  col-hours:
+    en: "Hours"
+    vi: "Giờ"
+  total-hours:
+    en: "Total hours"
+    vi: "Tổng giờ"
+  total-hours-decimal:
+    en: "Total hours (decimal)"
+    vi: "Tổng giờ (thập phân)"
+  of-which:
+    en: "Of which"
+    vi: "Trong đó"
+  note-unpaid:
+    en: "{x} hours of unpaid leave registered out of {y} total.\nMonthly pay quantity: {q}"
+    vi: "{x} giờ nghỉ không lương trong tổng số {y} giờ.\nHệ số lương tháng: {q}"
+  btn-validate:
+    en: "Validate"
+    vi: "Kiểm tra"
+  btn-generate:
+    en: "Generate Timesheet"
+    vi: "Tạo bảng chấm công"
+  btn-new:
+    en: "New Timesheet"
+    vi: "Bảng mới"
+  unlock-label:
+    en: "Unlock"
+    vi: "Mở khóa"
+  val-time-order:
+    en: "Time out must be after time in"
+    vi: "Giờ ra phải sau giờ vào"
+  val-desc-required:
+    en: "Description is required"
+    vi: "Mô tả là bắt buộc"
+  val-time-overlap:
+    en: "Time ranges overlap on this day"
+    vi: "Khoảng thời gian bị trùng"
+  val-hours-exceed:
+    en: "Daily hours exceed standard day length"
+    vi: "Giờ ngày vượt quá thời gian làm việc tiêu chuẩn"
+  val-code-empty:
+    en: "Code is not set on a workday row"
+    vi: "Mã chưa được chọn cho ngày làm việc"
+  new-confirm:
+    en: "This will clear all current timesheet data and start a fresh form. Your name, employee type, and language preference will be kept.<br><br>Are you sure?"
+    vi: "Thao tác này sẽ xóa tất cả dữ liệu bảng chấm công hiện tại. Tên, loại nhân viên và ngôn ngữ sẽ được giữ lại.<br><br>Bạn có chắc không?"
+  period-to:
+    en: "to"
+    vi: "đến"
+  generating:
+    en: "Generating PDF…"
+    vi: "Đang tạo PDF…"
+  signature-employee:
+    en: "Employee signature"
+    vi: "Chữ ký nhân viên"
+  signature-authorised:
+    en: "Authorised signature"
+    vi: "Chữ ký người có thẩm quyền"
+  signature-date:
+    en: "Date"
+    vi: "Ngày"
+  pdf-title:
+    en: "TIMESHEET"
+    vi: "BẢNG CHẤM CÔNG"
+  pdf-employee:
+    en: "Employee"
+    vi: "Nhân viên"
+  pdf-period:
+    en: "Period"
+    vi: "Kỳ"
+  pdf-type:
+    en: "Type"
+    vi: "Loại"

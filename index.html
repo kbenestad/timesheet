@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timesheet</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<style>
+:root { --accent: #1a3a5c; --bg: #f5f6f8; --card: #fff; --text: #222; --muted: #666; --border: #d0d4da; --err: #c62828; --warn: #e65100; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+.wrap { max-width: 980px; margin: 24px auto; background: var(--card); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 32px; }
+.loading { text-align: center; padding: 80px; color: var(--muted); }
+
+/* Header */
+.form-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.form-hdr .logo img { max-height: 56px; }
+.form-hdr .logo .org-name { font-size: 18px; font-weight: 700; color: var(--accent); }
+.form-hdr .title { font-size: 18px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; text-align: right; }
+
+/* Field rows */
+.frow { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.fgrp { display: flex; flex-direction: column; min-width: 100px; }
+.fgrp.grow { flex: 1; }
+.fgrp label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; letter-spacing: .3px; }
+input, select, textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; background: #fff; }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
+input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cursor: not-allowed; }
+
+/* Divider */
+.divider { border: none; border-top: 2px solid var(--accent); margin: 20px 0; }
+
+/* Buttons */
+.btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.btn-secondary { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
+.btn-secondary:hover { background: rgba(26,58,92,.04); }
+.btn-gen { background: var(--accent); color: #fff; font-size: 15px; padding: 12px 32px; border-radius: 6px; }
+.btn-gen:hover:not(:disabled) { opacity: .9; }
+.btn-gen:disabled { opacity: .45; cursor: not-allowed; }
+.btn-validate { background: #fff; color: var(--accent); border: 2px solid var(--accent); font-size: 15px; padding: 10px 24px; border-radius: 6px; }
+.btn-validate:hover { background: rgba(26,58,92,.04); }
+.btn-new { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 13px; padding: 7px 14px; border-radius: 4px; }
+.btn-new:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Validation summary */
+.val-summary { border-radius: 6px; padding: 14px 18px; margin-bottom: 16px; font-size: 13px; line-height: 1.8; }
+.val-summary.has-errors { background: #fce4e4; border: 1px solid var(--err); color: var(--err); }
+.val-summary.has-warnings { background: #fff3e0; border: 1px solid var(--warn); color: var(--warn); }
+.val-summary.has-both { background: #fce4e4; border: 1px solid var(--err); }
+.val-summary .err-line { color: var(--err); }
+.val-summary .warn-line { color: var(--warn); }
+
+/* Row grid */
+.grid-wrap { margin: 0 -4px; }
+.grid-header { display: grid; grid-template-columns: 68px 72px 72px 90px 1fr 56px 28px; gap: 4px; padding: 0 4px 6px; }
+.grid-header span { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .3px; }
+.grid-header .col-hours { text-align: right; }
+
+/* Day block */
+.day-block { position: relative; }
+.day-divider { height: 5px; border-top: 2px solid #fff; border-bottom: 2px solid #fff; background: #edebe9; margin: 0 4px; }
+
+/* Row */
+.ts-row {
+  display: grid;
+  grid-template-columns: 68px 72px 72px 90px 1fr 56px 28px;
+  gap: 4px;
+  padding: 5px 4px;
+  border-left: 4px solid transparent;
+  align-items: center;
+  position: relative;
+}
+.ts-row:hover .row-actions { opacity: 1; }
+.ts-row.continuation .col-date-cell { visibility: hidden; }
+
+.col-date-cell { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.col-date-cell .dow { font-size: 10px; font-weight: 400; color: var(--muted); }
+
+.ts-row input[type="time"] { padding: 4px 6px; font-size: 13px; width: 100%; }
+.ts-row select { padding: 4px 4px; font-size: 12px; width: 100%; }
+.ts-row input[type="text"] { padding: 4px 8px; font-size: 13px; width: 100%; }
+.col-hours-cell { font-size: 12px; font-weight: 600; text-align: right; color: var(--text); white-space: nowrap; padding-right: 2px; }
+
+/* Row actions (+/-) */
+.row-actions { opacity: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
+.btn-add-row, .btn-rm-row {
+  width: 22px; height: 22px; border-radius: 50%; border: 1px solid; cursor: pointer;
+  font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; padding: 0; font-family: inherit;
+}
+.btn-add-row { background: #fff; color: var(--accent); border-color: var(--accent); }
+.btn-add-row:hover { background: var(--accent); color: #fff; }
+.btn-rm-row { background: #fff; color: var(--err); border-color: var(--err); }
+.btn-rm-row:hover { background: var(--err); color: #fff; }
+
+/* Unlock checkbox */
+.unlock-wrap { display: none; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; position: absolute; right: 36px; top: 50%; transform: translateY(-50%); }
+.ts-row:hover .unlock-wrap { display: flex; }
+.unlock-wrap input[type="checkbox"] { width: 13px; height: 13px; margin: 0; cursor: pointer; }
+
+/* Validation highlights */
+.ts-row .input-err { border-color: var(--err) !important; }
+.ts-row .input-warn { border-color: var(--warn) !important; }
+
+/* Footer summary */
+.summary-block { margin-top: 20px; padding: 16px 20px; background: #f5f6f8; border-radius: 6px; border: 1px solid var(--border); }
+.summary-row { display: flex; justify-content: flex-end; gap: 12px; font-size: 13px; padding: 2px 0; }
+.summary-row .label { color: var(--muted); }
+.summary-row .value { font-weight: 600; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+.summary-note { margin-top: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
+.summary-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+
+/* Action row */
+.action-row { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
+.action-row .spacer { flex: 1; }
+
+/* Modal */
+.modal-overlay { position: fixed; top:0; right:0; bottom:0; left:0; background: rgba(0,0,0,.45); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.modal-box { background: #fff; border-radius: 8px; padding: 24px 28px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+.modal-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.modal-body { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 20px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+
+@media (max-width: 700px) {
+  .wrap { margin: 8px; padding: 16px; }
+  .frow { flex-direction: column; gap: 10px; }
+  .form-hdr { flex-direction: column; gap: 8px; }
+  .grid-header, .ts-row { grid-template-columns: 60px 66px 66px 80px 1fr 50px 24px; }
+}
+</style>
+</head>
+<body>
+<div id="app"><p class="loading">Loading configuration…</p></div>
+
+<script>
+(async function() {
+'use strict';
+
+// ========== UTILITIES ==========
+const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => [...(ctx || document).querySelectorAll(sel)];
+const el = (tag, attrs, children) => {
+  const e = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'className') e.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v != null && v !== false) e.setAttribute(k, v);
+  });
+  if (children) (Array.isArray(children) ? children : [children]).forEach(c => {
+    if (c == null) return;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return e;
+};
+
+function defaultPeriod() {
+  const d = new Date();
+  const isLastDay = d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const y = isLastDay ? d.getFullYear() : (d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear());
+  const m = isLastDay ? d.getMonth() : (d.getMonth() === 0 ? 11 : d.getMonth() - 1);
+  const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  return { from: fmt(new Date(y, m, 1)), to: fmt(new Date(y, m + 1, 0)) };
+}
+
+function fmtHM(totalMins) {
+  if (totalMins == null || isNaN(totalMins) || totalMins < 0) return '';
+  const h = Math.floor(totalMins / 60);
+  const m = Math.abs(totalMins % 60);
+  return `${h}:${String(m).padStart(2,'0')}`;
+}
+
+function parseHM(str) {
+  if (!str) return null;
+  const [h, m] = str.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function calcRowMins(row) {
+  const inM = parseHM(row.timeIn);
+  const outM = parseHM(row.timeOut);
+  if (inM == null || outM == null || outM <= inM) return null;
+  return outM - inM;
+}
+
+// Day of week utilities
+const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES_VI = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+
+function getMonthNames(lang) {
+  return lang === 'vi' ? MONTH_NAMES_VI : MONTH_NAMES_EN;
+}
+
+function parseDateStr(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function dateStrDow(s) {
+  return parseDateStr(s).getDay();
+}
+
+function fmtDate(s, lang) {
+  const d = parseDateStr(s);
+  const mn = getMonthNames(lang)[d.getMonth()];
+  return `${d.getDate()} ${mn}`;
+}
+
+function fmtDow(s, lang) {
+  const dow = DOW_NAMES[parseDateStr(s).getDay()];
+  if (lang !== 'vi') return dow;
+  const map = {Sun:'CN',Mon:'T2',Tue:'T3',Wed:'T4',Thu:'T5',Fri:'T6',Sat:'T7'};
+  return map[dow] || dow;
+}
+
+function dateRange(from, to) {
+  const dates = [];
+  const d = parseDateStr(from);
+  const end = parseDateStr(to);
+  while (d <= end) {
+    const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    dates.push(s);
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+// ========== CONFIG ==========
+let CFG;
+async function loadConfig() {
+  const res = await fetch('timesheet-config.yml');
+  if (!res.ok) throw new Error('Cannot load timesheet-config.yml');
+  CFG = jsyaml.load(await res.text());
+  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#1a3a5c');
+}
+
+function S(key) {
+  const ui = CFG['ui-strings'] || {};
+  const entry = ui[key];
+  if (!entry) return key;
+  return entry[state.lang] || entry['en'] || key;
+}
+
+function codeObj(code) {
+  return (CFG.codes || []).find(c => c.code === code);
+}
+
+function codesForType(empType) {
+  return (CFG.codes || []).filter(c => (c['employee-types'] || []).includes(empType));
+}
+
+function isHoliday(dateStr) {
+  return (CFG.holidays || []).some(h => h.date === dateStr);
+}
+
+function holidayObj(dateStr) {
+  return (CFG.holidays || []).find(h => h.date === dateStr);
+}
+
+function isWorkday(dateStr) {
+  const dow = DOW_NAMES[dateStrDow(dateStr)];
+  return (CFG['work-week'] || ['Mon','Tue','Wed','Thu','Fri']).includes(dow);
+}
+
+// ========== STATE ==========
+const state = {
+  employee: '',
+  empType: 'salaried',
+  lang: 'en',
+  periodFrom: '',
+  periodTo: '',
+  days: {},     // dateStr -> [row, ...]
+  unlocks: {},  // rowKey -> true
+};
+
+// rowKey: `${dateStr}-${rowIndex}`
+function rowKey(dateStr, idx) { return `${dateStr}-${idx}`; }
+
+// ========== ROW DEFAULTS ==========
+function defaultRowsForDay(dateStr, empType) {
+  const wstart = CFG['work-day-start'] || '09:00';
+  const wend   = CFG['work-day-end']   || '17:00';
+  const weekend = !isWorkday(dateStr);
+  const holiday = isHoliday(dateStr);
+
+  if (empType === 'hourly') {
+    return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
+  }
+
+  // salaried
+  if (weekend) {
+    return [{ code: 'WEEKEND', timeIn: '', timeOut: '', desc: '', _locked: true }];
+  }
+  if (holiday) {
+    return [{ code: 'HOL', timeIn: wstart, timeOut: wend, desc: '', _locked: true }];
+  }
+  return [{ code: 'REG', timeIn: wstart, timeOut: wend, desc: '', _locked: false }];
+}
+
+function buildDefaultDays(from, to, empType) {
+  const days = {};
+  for (const ds of dateRange(from, to)) {
+    days[ds] = defaultRowsForDay(ds, empType);
+  }
+  return days;
+}
+
+// Is a given row effectively locked (considering unlock overrides)?
+function isRowLocked(dateStr, idx, row) {
+  if (state.unlocks[rowKey(dateStr, idx)]) return false;
+  return row._locked === true;
+}
+
+// ========== PERSISTENCE ==========
+let autoSaveTimer = null;
+
+function saveState() {
+  const serial = {
+    employee: state.employee,
+    empType: state.empType,
+    lang: state.lang,
+    periodFrom: state.periodFrom,
+    periodTo: state.periodTo,
+    days: state.days,
+    unlocks: state.unlocks,
+  };
+  try { localStorage.setItem('ts-state', JSON.stringify(serial)); } catch(e) {}
+}
+
+function loadSavedState() {
+  const raw = localStorage.getItem('ts-state');
+  if (!raw) return false;
+  try {
+    const d = JSON.parse(raw);
+    if (d.employee != null) state.employee = d.employee;
+    if (d.empType)   state.empType = d.empType;
+    if (d.lang)      state.lang    = d.lang;
+    if (d.periodFrom) state.periodFrom = d.periodFrom;
+    if (d.periodTo)   state.periodTo   = d.periodTo;
+    if (d.days)   state.days    = d.days;
+    if (d.unlocks) state.unlocks = d.unlocks;
+    return true;
+  } catch(e) { return false; }
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveState, 1000);
+}
+
+// ========== TOTALS ==========
+function computeTotals() {
+  const empType = state.empType;
+  const codeTotals = {};
+  let grandMins = 0;
+
+  for (const [ds, rows] of Object.entries(state.days)) {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const code = row.code;
+      if (!code || code === 'WEEKEND') continue;
+      const cObj = codeObj(code);
+      if (!cObj || !cObj.counthours) continue;
+      if (code === 'HOL' && empType !== 'salaried') continue;
+      const mins = calcRowMins(row);
+      if (mins == null || mins <= 0) continue;
+      codeTotals[code] = (codeTotals[code] || 0) + mins;
+      grandMins += mins;
+    }
+  }
+  return { codeTotals, grandMins };
+}
+
+// ========== MODALS ==========
+function showConfirmModal(msgHTML) {
+  return new Promise(resolve => {
+    const overlay = el('div', {className:'modal-overlay'});
+    const box = el('div', {className:'modal-box'});
+    const hdr = el('div', {className:'modal-hdr'});
+    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
+    const body = el('div', {className:'modal-body'});
+    body.innerHTML = msgHTML;
+    const footer = el('div', {className:'modal-footer'});
+    const cancelBtn = el('button', {className:'btn btn-secondary', style:{padding:'8px 18px'}}, S('btn-validate') === 'Validate' ? 'Cancel' : 'Huỷ');
+    const confirmBtn = el('button', {className:'btn btn-gen', style:{marginTop:'0',width:'auto',padding:'8px 24px'}}, S('btn-new'));
+    cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(false); });
+    confirmBtn.addEventListener('click', () => { overlay.remove(); resolve(true); });
+    footer.append(cancelBtn, confirmBtn);
+    box.append(hdr, body, footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    cancelBtn.focus();
+  });
+}
+
+// ========== VALIDATION ==========
+function runValidation() {
+  const errors = []; // blocking
+  const warnings = []; // non-blocking
+
+  const wstartM = parseHM(CFG['work-day-start'] || '09:00');
+  const wendM   = parseHM(CFG['work-day-end']   || '17:00');
+  const stdMins = (wendM != null && wstartM != null) ? (wendM - wstartM) : null;
+
+  const sortedDates = Object.keys(state.days).sort();
+
+  for (const ds of sortedDates) {
+    const rows = state.days[ds];
+    const displayDate = fmtDate(ds, state.lang);
+    let dayTotalMins = 0;
+    const intervals = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const locked = isRowLocked(ds, i, row);
+      if (locked) continue;
+      if (!row.code || row.code === 'WEEKEND') continue;
+
+      // Time order check
+      const inM  = parseHM(row.timeIn);
+      const outM = parseHM(row.timeOut);
+      if (inM != null && outM != null && outM <= inM) {
+        errors.push(`${displayDate}: ${S('val-time-order')}`);
+      } else if (inM != null && outM != null && outM > inM) {
+        intervals.push([inM, outM]);
+        dayTotalMins += (outM - inM);
+      }
+
+      // Description required for REG and OTH
+      if ((row.code === 'REG' || row.code === 'OTH') && !row.desc.trim()) {
+        errors.push(`${displayDate}: ${S('val-desc-required')} (${row.code})`);
+      }
+    }
+
+    // Overlap check
+    const sorted = [...intervals].sort((a,b) => a[0]-b[0]);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i][0] < sorted[i-1][1]) {
+        errors.push(`${displayDate}: ${S('val-time-overlap')}`);
+        break;
+      }
+    }
+
+    // Daily hours exceed standard
+    if (stdMins != null && dayTotalMins > stdMins) {
+      warnings.push(`${displayDate}: ${S('val-hours-exceed')} (${fmtHM(dayTotalMins)} > ${fmtHM(stdMins)})`);
+    }
+
+    // Unlocked workday rows with no code
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const locked = isRowLocked(ds, i, row);
+      if (locked) continue;
+      if (!row.code) {
+        warnings.push(`${displayDate}: ${S('val-code-empty')}`);
+        break;
+      }
+    }
+  }
+
+  return { errors, warnings };
+}
+
+// ========== ROW COLOUR ==========
+function applyRowColour(rowEl, dateStr, row, rowIndex, totalRowsForDay) {
+  const code = row.code;
+  const isLocked = isRowLocked(dateStr, rowIndex, row);
+  const mutedbg = CFG['muted-background'] === true || CFG['muted-background'] === 'yes';
+
+  rowEl.style.borderLeftColor = '';
+  rowEl.style.background = '';
+
+  if (!code || code === 'WEEKEND') {
+    rowEl.style.borderLeftColor = '#c0c0c0';
+    if (mutedbg) rowEl.style.background = 'rgba(200,200,200,0.35)';
+    return;
+  }
+
+  const cObj = codeObj(code);
+  if (!cObj) return;
+
+  let borderCol, bgCol;
+
+  if (code === 'PPT') {
+    const isFullDay = totalRowsForDay === 1;
+    borderCol = isFullDay ? cObj['colour-border-fullday'] : cObj['colour-border-partialday'];
+    bgCol     = isFullDay ? cObj['colour-bg-fullday']     : cObj['colour-bg-partialday'];
+  } else {
+    borderCol = cObj['colour-border'];
+    bgCol     = cObj['colour-bg'];
+  }
+
+  if (borderCol) rowEl.style.borderLeftColor = borderCol;
+  if (bgCol && mutedbg) {
+    const opacity = isLocked ? 0.40 : 0.15;
+    rowEl.style.background = hexWithOpacity(bgCol, opacity);
+  }
+}
+
+function hexWithOpacity(hex, opacity) {
+  const h = hex.replace('#','');
+  const r = parseInt(h.slice(0,2),16);
+  const g = parseInt(h.slice(2,4),16);
+  const b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+// ========== RENDER ==========
+let validationResult = null;
+
+function render() {
+  const app = $('#app');
+  app.innerHTML = '';
+  const wrap = el('div', {className:'wrap'});
+
+  // Val box
+  const valBox = el('div', {id:'val-box'});
+  wrap.appendChild(valBox);
+
+  // Header
+  const hdr = el('div', {className:'form-hdr'});
+  const logoDiv = el('div', {className:'logo'});
+  if (CFG.logo === true || CFG.logo === 'yes') {
+    const img = el('img', {alt: CFG.organization || ''});
+    img.src = 'assets/logo.png';
+    img.onerror = function() {
+      this.src = 'assets/logo.jpg';
+      this.onerror = function() { this.replaceWith(el('span', {className:'org-name'}, CFG.organization || '')); };
+    };
+    if (CFG['logo-maxwidth']) img.style.maxWidth = CFG['logo-maxwidth'] + 'cm';
+    logoDiv.appendChild(img);
+  } else {
+    logoDiv.appendChild(el('span', {className:'org-name'}, CFG.organization || ''));
+  }
+  hdr.append(logoDiv, el('div', {className:'title'}, 'TIMESHEET'));
+  wrap.appendChild(hdr);
+
+  // Header fields
+  const employeeInput = el('input', {type:'text', value: state.employee, placeholder: S('employee-label')});
+  employeeInput.addEventListener('input', () => {
+    state.employee = employeeInput.value;
+    localStorage.setItem('timesheet-employee', employeeInput.value);
+    scheduleAutoSave();
+  });
+
+  const empTypeSelect = el('select');
+  ['salaried','hourly'].forEach(t => {
+    const key = t === 'salaried' ? 'option-salaried' : 'option-hourly';
+    empTypeSelect.appendChild(el('option', {value:t, ...(state.empType === t ? {selected:''} : {})}, S(key)));
+  });
+  empTypeSelect.addEventListener('change', () => {
+    state.empType = empTypeSelect.value;
+    localStorage.setItem('timesheet-type', empTypeSelect.value);
+    regenerateDays();
+    scheduleAutoSave();
+  });
+
+  const langSelect = el('select');
+  (CFG.languages || [{code:'en',display:'English'}]).forEach(l => {
+    langSelect.appendChild(el('option', {value:l.code, ...(state.lang === l.code ? {selected:''} : {})}, l.display));
+  });
+  langSelect.addEventListener('change', () => {
+    state.lang = langSelect.value;
+    localStorage.setItem('timesheet-lang', langSelect.value);
+    scheduleAutoSave();
+    render();
+  });
+
+  const fromInput = el('input', {type:'date'});
+  fromInput.value = state.periodFrom;
+  const toInput = el('input', {type:'date'});
+  toInput.value = state.periodTo;
+
+  function onPeriodChange() {
+    const nf = fromInput.value, nt = toInput.value;
+    if (nf && nt && nf <= nt) {
+      state.periodFrom = nf;
+      state.periodTo = nt;
+      regenerateDays();
+      scheduleAutoSave();
+    }
+  }
+  fromInput.addEventListener('change', onPeriodChange);
+  toInput.addEventListener('change', onPeriodChange);
+
+  const newBtn = el('button', {type:'button', className:'btn btn-new', onClick: onNewTimesheet}, S('btn-new'));
+
+  wrap.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp grow'}, [
+      el('label', null, S('employee-label')),
+      el('div', {style:{display:'flex',gap:'8px',alignItems:'center'}}, [employeeInput, newBtn])
+    ]),
+    el('div', {className:'fgrp'}, [el('label', null, S('employee-type-label')), empTypeSelect]),
+    el('div', {className:'fgrp'}, [el('label', null, S('language-label')), langSelect]),
+  ]));
+  wrap.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp'}, [el('label', null, S('period-label')), fromInput]),
+    el('div', {className:'fgrp', style:{justifyContent:'flex-end'}}, [el('label', null, S('period-to')), toInput]),
+  ]));
+
+  wrap.appendChild(el('hr', {className:'divider'}));
+
+  // Grid header
+  const gridWrap = el('div', {className:'grid-wrap', id:'grid-wrap'});
+  const ghdr = el('div', {className:'grid-header'});
+  ghdr.append(
+    el('span', null, S('col-date')),
+    el('span', null, S('col-time-in')),
+    el('span', null, S('col-time-out')),
+    el('span', null, S('col-code')),
+    el('span', null, S('col-description')),
+    el('span', {className:'col-hours'}, S('col-hours')),
+    el('span', null, '')
+  );
+  gridWrap.appendChild(ghdr);
+
+  const datesInPeriod = dateRange(state.periodFrom, state.periodTo);
+  datesInPeriod.forEach((ds, di) => {
+    if (di > 0) gridWrap.appendChild(el('div', {className:'day-divider'}));
+    gridWrap.appendChild(renderDayBlock(ds));
+  });
+  wrap.appendChild(gridWrap);
+
+  // Summary
+  wrap.appendChild(renderSummary());
+
+  // Action row
+  const genBtn = el('button', {id:'gen-btn', className:'btn btn-gen', onClick: onGenerate}, S('btn-generate'));
+  const valBtn = el('button', {className:'btn btn-validate', onClick: () => {
+    validationResult = runValidation();
+    renderValBox(valBox);
+    if (!validationResult.errors.length && !validationResult.warnings.length) {
+      valBox.innerHTML = '';
+    }
+    updateGenBtn(genBtn);
+  }}, S('btn-validate'));
+
+  updateGenBtn(genBtn);
+  wrap.appendChild(el('div', {className:'action-row'}, [valBtn, el('span', {className:'spacer'}), genBtn]));
+
+  app.appendChild(wrap);
+}
+
+function updateGenBtn(btn) {
+  if (validationResult && validationResult.errors.length > 0) {
+    btn.disabled = true;
+  } else {
+    btn.disabled = false;
+  }
+}
+
+function renderValBox(box) {
+  box.innerHTML = '';
+  if (!validationResult) return;
+  const {errors, warnings} = validationResult;
+  if (!errors.length && !warnings.length) return;
+  const hasErrors = errors.length > 0;
+  const hasWarnings = warnings.length > 0;
+  const cls = hasErrors && hasWarnings ? 'val-summary has-both' : hasErrors ? 'val-summary has-errors' : 'val-summary has-warnings';
+  const div = el('div', {className: cls});
+  if (hasErrors) {
+    div.appendChild(el('div', {style:{fontWeight:'700',marginBottom:'4px'}}, hasErrors ? '⛔ Errors (must fix before generating):' : ''));
+    errors.forEach(e => {
+      const d = el('div', {className:'err-line'}); d.textContent = '• ' + e; div.appendChild(d);
+    });
+  }
+  if (hasWarnings) {
+    if (hasErrors) div.appendChild(el('div', {style:{marginTop:'8px',fontWeight:'700',marginBottom:'4px'}}, '⚠ Warnings:'));
+    else div.appendChild(el('div', {style:{fontWeight:'700',marginBottom:'4px'}}, '⚠ Warnings:'));
+    warnings.forEach(w => {
+      const d = el('div', {className:'warn-line'}); d.textContent = '• ' + w; div.appendChild(d);
+    });
+  }
+  box.appendChild(div);
+}
+
+function renderDayBlock(dateStr) {
+  const block = el('div', {className:'day-block', id:`day-${dateStr}`});
+  redrawDayBlock(block, dateStr);
+  return block;
+}
+
+function redrawDayBlock(block, dateStr) {
+  block.innerHTML = '';
+  const rows = state.days[dateStr] || [];
+  const totalRows = rows.length;
+
+  rows.forEach((row, i) => {
+    const isFirst = i === 0;
+    const isLast  = i === totalRows - 1;
+    block.appendChild(renderRow(dateStr, i, row, isFirst, isLast, totalRows));
+  });
+}
+
+function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
+  const locked = isRowLocked(dateStr, rowIndex, row);
+  const rowEl = el('div', {className: 'ts-row' + (isFirst ? '' : ' continuation')});
+
+  // Date cell
+  const dateCellEl = el('div', {className:'col-date-cell'});
+  if (isFirst) {
+    dateCellEl.appendChild(document.createTextNode(fmtDate(dateStr, state.lang)));
+    dateCellEl.appendChild(el('br'));
+    dateCellEl.appendChild(el('span', {className:'dow'}, fmtDow(dateStr, state.lang)));
+  }
+  rowEl.appendChild(dateCellEl);
+
+  // Time In
+  const timeInEl = el('input', {type:'time', value: row.timeIn || '', ...(locked ? {disabled:''} : {})});
+  timeInEl.addEventListener('change', () => {
+    row.timeIn = timeInEl.value;
+    updateHoursCell(rowEl, row);
+    refreshSummary();
+    scheduleAutoSave();
+  });
+  rowEl.appendChild(timeInEl);
+
+  // Time Out
+  const timeOutEl = el('input', {type:'time', value: row.timeOut || '', ...(locked ? {disabled:''} : {})});
+  timeOutEl.addEventListener('change', () => {
+    row.timeOut = timeOutEl.value;
+    updateHoursCell(rowEl, row);
+    refreshSummary();
+    scheduleAutoSave();
+  });
+  rowEl.appendChild(timeOutEl);
+
+  // Code dropdown
+  const codeEl = el('select', {disabled: locked ? '' : null});
+  if (!locked) {
+    // For continuation rows, allow any code for the employee type
+    // Weekend/NON can't be user-selected
+    const available = codesForType(state.empType).filter(c => {
+      if (state.empType === 'salaried' && c.code === 'NON') return false;
+      if (state.empType === 'hourly'   && c.code === 'UNP') return false;
+      return true;
+    });
+    if (!row.code) codeEl.appendChild(el('option', {value:''}, ''));
+    available.forEach(c => {
+      const dispKey = `display-${state.lang}`;
+      const disp = c[dispKey] || c['display-en'] || c.code;
+      codeEl.appendChild(el('option', {value: c.code, ...(row.code === c.code ? {selected:''} : {})}, disp));
+    });
+    codeEl.addEventListener('change', () => {
+      row.code = codeEl.value;
+      applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
+      // Update hint
+      updateDescHint(descEl, row);
+      scheduleAutoSave();
+      refreshSummary();
+    });
+  } else {
+    // Locked: show display name
+    const cObj = codeObj(row.code);
+    if (row.code === 'WEEKEND') {
+      codeEl.appendChild(el('option', {value:'WEEKEND'}, state.lang === 'vi' ? 'Cuối tuần' : 'Weekend'));
+    } else if (cObj) {
+      const dispKey = `display-${state.lang}`;
+      codeEl.appendChild(el('option', {value: row.code}, cObj[dispKey] || cObj['display-en'] || row.code));
+    } else {
+      codeEl.appendChild(el('option', {value: row.code || ''}, row.code || ''));
+    }
+  }
+  rowEl.appendChild(codeEl);
+
+  // Description
+  const descEl = el('input', {type:'text', value: row.desc || '', ...(locked ? {disabled:''} : {})});
+  updateDescHint(descEl, row);
+  descEl.addEventListener('input', () => { row.desc = descEl.value; scheduleAutoSave(); });
+  rowEl.appendChild(descEl);
+
+  // Hours
+  const hoursEl = el('div', {className:'col-hours-cell', id:`hrs-${dateStr}-${rowIndex}`});
+  const mins = calcRowMins(row);
+  hoursEl.textContent = (mins != null && mins > 0) ? fmtHM(mins) : '';
+  rowEl.appendChild(hoursEl);
+
+  // Action button (+ or -)
+  const actionEl = el('div', {className:'row-actions'});
+  if (isLast) {
+    const addBtn = el('button', {type:'button', className:'btn-add-row', title:'Add row'}, '+');
+    addBtn.addEventListener('click', () => {
+      const rows = state.days[dateStr];
+      rows.push({ code: '', timeIn: '', timeOut: '', desc: '', _locked: false });
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      refreshSummary();
+      scheduleAutoSave();
+    });
+    actionEl.appendChild(addBtn);
+  } else if (!isFirst) {
+    // continuation non-last: show minus
+    const rmBtn = el('button', {type:'button', className:'btn-rm-row', title:'Remove row'}, '−');
+    rmBtn.addEventListener('click', () => {
+      state.days[dateStr].splice(rowIndex, 1);
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      refreshSummary();
+      scheduleAutoSave();
+    });
+    actionEl.appendChild(rmBtn);
+  }
+  // Last continuation row (not first) should show both minus. Actually spec: [−] on all continuation rows, [+] only on last row.
+  // For the last continuation row, we already added [+]. We need [−] too if it's a continuation.
+  if (isLast && !isFirst) {
+    // Replace with dual buttons
+    actionEl.innerHTML = '';
+    const rmBtn2 = el('button', {type:'button', className:'btn-rm-row', title:'Remove row', style:{marginRight:'2px'}}, '−');
+    rmBtn2.addEventListener('click', () => {
+      state.days[dateStr].splice(rowIndex, 1);
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      refreshSummary();
+      scheduleAutoSave();
+    });
+    const addBtn2 = el('button', {type:'button', className:'btn-add-row', title:'Add row'}, '+');
+    addBtn2.addEventListener('click', () => {
+      const rows = state.days[dateStr];
+      rows.push({ code: '', timeIn: '', timeOut: '', desc: '', _locked: false });
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      refreshSummary();
+      scheduleAutoSave();
+    });
+    actionEl.append(rmBtn2, addBtn2);
+  }
+  rowEl.appendChild(actionEl);
+
+  // Unlock checkbox (only for locked rows)
+  if (row._locked) {
+    const unlockKey = rowKey(dateStr, rowIndex);
+    const unlockWrap = el('label', {className:'unlock-wrap', title: S('unlock-label')});
+    const chk = el('input', {type:'checkbox', ...(state.unlocks[unlockKey] ? {checked:''} : {})});
+    chk.addEventListener('change', () => {
+      if (chk.checked) state.unlocks[unlockKey] = true;
+      else delete state.unlocks[unlockKey];
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      scheduleAutoSave();
+    });
+    unlockWrap.append(chk, S('unlock-label'));
+    rowEl.appendChild(unlockWrap);
+  }
+
+  applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
+  return rowEl;
+}
+
+function updateDescHint(descEl, row) {
+  const cObj = codeObj(row.code);
+  if (cObj) {
+    const hintKey = `hint-${state.lang}`;
+    descEl.placeholder = cObj[hintKey] || cObj['hint-en'] || '';
+  } else {
+    descEl.placeholder = '';
+  }
+}
+
+function updateHoursCell(rowEl, row) {
+  const mins = calcRowMins(row);
+  const hEl = rowEl.querySelector('.col-hours-cell');
+  if (hEl) hEl.textContent = (mins != null && mins > 0) ? fmtHM(mins) : '';
+}
+
+function refreshSummary() {
+  const existing = $('#summary-block');
+  if (existing) existing.replaceWith(renderSummary());
+}
+
+function renderSummary() {
+  const {codeTotals, grandMins} = computeTotals();
+  const block = el('div', {className:'summary-block', id:'summary-block'});
+
+  const decimalHours = (grandMins / 60).toFixed(2);
+
+  block.appendChild(el('div', {className:'summary-row'}, [
+    el('span', {className:'label'}, S('total-hours') + ':'),
+    el('span', {className:'value', style:{color:'var(--accent)',fontSize:'15px'}}, fmtHM(grandMins))
+  ]));
+  block.appendChild(el('div', {className:'summary-row'}, [
+    el('span', {className:'label'}, S('total-hours-decimal') + ':'),
+    el('span', {className:'value'}, decimalHours)
+  ]));
+
+  block.appendChild(el('hr', {className:'summary-divider'}));
+
+  const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
+  shownCodes.forEach(c => {
+    const dispKey = `display-${state.lang}`;
+    const disp = c[dispKey] || c['display-en'] || c.code;
+    block.appendChild(el('div', {className:'summary-row'}, [
+      el('span', {className:'label'}, `${S('of-which')} ${disp}:`),
+      el('span', {className:'value'}, fmtHM(codeTotals[c.code] || 0))
+    ]));
+  });
+
+  // UNP note
+  const unpMins = codeTotals['UNP'] || 0;
+  if (unpMins > 0 && grandMins > 0) {
+    const qty = (1 - unpMins / grandMins).toFixed(6);
+    const noteTemplate = S('note-unpaid');
+    const noteText = noteTemplate
+      .replace('{x}', fmtHM(unpMins))
+      .replace('{y}', fmtHM(grandMins))
+      .replace('{q}', qty);
+    const noteDiv = el('div', {className:'summary-note'});
+    noteText.split('\n').forEach((line, i) => {
+      if (i > 0) noteDiv.appendChild(el('br'));
+      noteDiv.appendChild(document.createTextNode(line));
+    });
+    block.appendChild(noteDiv);
+  }
+
+  return block;
+}
+
+// ========== PERIOD / DAY REGENERATION ==========
+function regenerateDays() {
+  if (!state.periodFrom || !state.periodTo) return;
+  const newDays = buildDefaultDays(state.periodFrom, state.periodTo, state.empType);
+
+  // Preserve existing row data for dates still in range
+  for (const ds of Object.keys(newDays)) {
+    if (state.days[ds]) {
+      newDays[ds] = state.days[ds];
+    }
+  }
+  state.days = newDays;
+
+  const gridWrap = $('#grid-wrap');
+  if (!gridWrap) { render(); return; }
+
+  // Rebuild grid content (preserve header)
+  const header = gridWrap.querySelector('.grid-header');
+  gridWrap.innerHTML = '';
+  if (header) gridWrap.appendChild(header);
+
+  const dates = dateRange(state.periodFrom, state.periodTo);
+  dates.forEach((ds, di) => {
+    if (di > 0) gridWrap.appendChild(el('div', {className:'day-divider'}));
+    gridWrap.appendChild(renderDayBlock(ds));
+  });
+
+  refreshSummary();
+}
+
+// ========== NEW TIMESHEET ==========
+async function onNewTimesheet() {
+  const confirmed = await showConfirmModal(S('new-confirm'));
+  if (!confirmed) return;
+  const p = defaultPeriod();
+  state.periodFrom = p.from;
+  state.periodTo   = p.to;
+  state.days    = buildDefaultDays(p.from, p.to, state.empType);
+  state.unlocks = {};
+  validationResult = null;
+  try { localStorage.setItem('ts-state', ''); } catch(e) {}
+  render();
+}
+
+// ========== PDF ENGINE ==========
+function parseHexColor(hex) {
+  const h = hex.replace('#','');
+  return PDFLib.rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
+}
+
+function wrapText(text, font, size, maxW) {
+  const words = (text || '').split(/\s+/);
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    const test = cur ? cur + ' ' + w : w;
+    if (font.widthOfTextAtSize(test, size) > maxW) { if (cur) lines.push(cur); cur = w; }
+    else cur = test;
+  });
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+function truncate(text, font, size, maxW) {
+  if (!text) return '';
+  if (font.widthOfTextAtSize(text, size) <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+async function loadLogo(doc) {
+  for (const ext of ['png','jpg']) {
+    try {
+      const res = await fetch(`assets/logo.${ext}`);
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      return ext === 'png' ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+async function generatePDF() {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const doc = await PDFDocument.create();
+  const pageW = CFG['page-size'] === 'letter' ? 612 : 595.28;
+  const pageH = CFG['page-size'] === 'letter' ? 792 : 841.89;
+  const M = { top: 50, bottom: 65, left: 45, right: 45 };
+  const W = pageW - M.left - M.right;
+
+  const fontBody = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const sz  = CFG['font-size'] || 10;
+  const szSm = sz - 1;
+  const szLg = sz + 4;
+  const lh = sz + 5;
+
+  const accent  = parseHexColor(CFG['accent-colour'] || '#1a3a5c');
+  const black   = rgb(0.13, 0.13, 0.13);
+  const gray    = rgb(0.45, 0.45, 0.45);
+  const lgray   = rgb(0.65, 0.65, 0.65);
+  const lineCol = rgb(0.80, 0.80, 0.80);
+  const white   = rgb(1,1,1);
+
+  let logoImage = null;
+  if (CFG.logo === true || CFG.logo === 'yes') logoImage = await loadLogo(doc);
+
+  const pages = [];
+  let pg, y;
+
+  function addPage(cont) {
+    pg = doc.addPage([pageW, pageH]);
+    pages.push(pg);
+    y = pageH - M.top;
+    if (cont) drawContHeader();
+  }
+
+  function needSpace(h) {
+    if (y - h < M.bottom) addPage(true);
+  }
+
+  function drawContHeader() {
+    pg.drawText(state.employee || '', {x:M.left, y, size:sz, font:fontBold, color:black});
+    const ps = `${state.periodFrom}  –  ${state.periodTo}`;
+    const pw = fontBody.widthOfTextAtSize(ps, sz);
+    pg.drawText(ps, {x:M.left+W-pw, y, size:sz, font:fontBody, color:gray});
+    y -= lh;
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+    y -= lh;
+  }
+
+  // Page 1
+  addPage(false);
+
+  // Logo / org name
+  const mm10 = 10 * 2.83465;
+  if (logoImage) {
+    const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
+    const scale = Math.min(maxW / logoImage.width, 52 / logoImage.height, 1);
+    const lw = logoImage.width * scale, lhh = logoImage.height * scale;
+    const logoTop = pageH - mm10;
+    pg.drawImage(logoImage, {x:mm10, y:logoTop-lhh, width:lw, height:lhh});
+    y = Math.min(y, logoTop - lhh - 8);
+  } else if (CFG.organization) {
+    pg.drawText(CFG.organization, {x:M.left, y, size:szLg, font:fontBold, color:accent});
+    y -= szLg + 8;
+  }
+
+  const titleStr = S('pdf-title');
+  const tw = fontBold.widthOfTextAtSize(titleStr, szLg);
+  pg.drawText(titleStr, {x:M.left+W-tw, y, size:szLg, font:fontBold, color:accent});
+  y -= szLg + 10;
+
+  // Employee / Period / Type row
+  const c1=0, c2=W*0.38, c3=W*0.7;
+  pg.drawText(S('pdf-employee'), {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText(S('pdf-period'),   {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText(S('pdf-type'),     {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
+  y -= lh;
+  pg.drawText(state.employee || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+  pg.drawText(`${state.periodFrom}  –  ${state.periodTo}`, {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+  const typeDisp = state.empType === 'salaried' ? S('option-salaried') : S('option-hourly');
+  pg.drawText(typeDisp, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+  y -= lh + 4;
+
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= lh;
+
+  // Table header
+  const COL = [0, W*0.10, W*0.22, W*0.34, W*0.50, W*0.92];
+  // DATE | TIME IN | TIME OUT | CODE | DESCRIPTION | HOURS
+  const headers = [S('col-date'), S('col-time-in'), S('col-time-out'), S('col-code'), S('col-description'), S('col-hours')];
+  headers.forEach((h, i) => {
+    const x = M.left + COL[i];
+    const txt = h.toUpperCase();
+    if (i === 5) {
+      const hw = fontBold.widthOfTextAtSize(txt, szSm-1);
+      pg.drawText(txt, {x: M.left+W-hw, y, size:szSm-1, font:fontBold, color:gray});
+    } else {
+      pg.drawText(txt, {x, y, size:szSm-1, font:fontBold, color:gray});
+    }
+  });
+  y -= szSm + 3;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+  y -= 6;
+
+  // Rows
+  const sortedDates = Object.keys(state.days).sort();
+  for (let di = 0; di < sortedDates.length; di++) {
+    const ds = sortedDates[di];
+    const rows = state.days[ds];
+
+    // Day divider (not before first)
+    if (di > 0) {
+      needSpace(lh * 2);
+      // 5px rule: 2px white + 1px edebe9 + 2px white
+      y -= 2;
+      pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1, color:rgb(0.93,0.92,0.91)});
+      y -= 3;
+    }
+
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      const isFirst = ri === 0;
+      const isLocked = isRowLocked(ds, ri, row);
+      needSpace(lh + 4);
+
+      const rowY = y;
+      const textColor = isLocked ? lgray : black;
+      const timeColor = isLocked ? lgray : black;
+
+      // Date (only on first row of day)
+      if (isFirst) {
+        const dateTxt = fmtDate(ds, state.lang) + ' ' + fmtDow(ds, state.lang);
+        pg.drawText(dateTxt, {x:M.left+COL[0], y:rowY, size:sz, font:isLocked ? fontBody : fontBold, color:textColor});
+      }
+
+      // Time in
+      if (row.timeIn) pg.drawText(row.timeIn, {x:M.left+COL[1], y:rowY, size:sz, font:fontBody, color:timeColor});
+
+      // Time out
+      if (row.timeOut) pg.drawText(row.timeOut, {x:M.left+COL[2], y:rowY, size:sz, font:fontBody, color:timeColor});
+
+      // Code display
+      if (row.code && row.code !== 'WEEKEND') {
+        const cObj = codeObj(row.code);
+        const dispKey = `display-${state.lang}`;
+        const codeTxt = cObj ? (cObj[dispKey] || cObj['display-en'] || row.code) : (row.code === 'WEEKEND' ? 'Weekend' : row.code);
+        pg.drawText(codeTxt, {x:M.left+COL[3], y:rowY, size:sz, font:fontBody, color:textColor});
+      } else if (row.code === 'WEEKEND') {
+        const wkTxt = state.lang === 'vi' ? 'Cuối tuần' : 'Weekend';
+        pg.drawText(wkTxt, {x:M.left+COL[3], y:rowY, size:sz, font:fontBody, color:lgray});
+      }
+
+      // Description
+      const descMaxW = W - COL[4] - (W - COL[5]) - 8;
+      if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:M.left+COL[4], y:rowY, size:szSm, font:fontBody, color:textColor});
+
+      // Hours (right-aligned)
+      const mins = calcRowMins(row);
+      if (mins != null && mins > 0) {
+        const hStr = fmtHM(mins);
+        const hw = fontBody.widthOfTextAtSize(hStr, sz);
+        pg.drawText(hStr, {x:M.left+W-hw, y:rowY, size:sz, font:fontBold, color:textColor});
+      }
+
+      y -= lh;
+    }
+  }
+
+  // Summary block
+  needSpace(lh * 12);
+  y -= 6;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:2, color:accent});
+  y -= lh + 2;
+
+  const {codeTotals, grandMins} = computeTotals();
+  const decHours = (grandMins / 60).toFixed(2);
+  const summaryRight = M.left + W;
+
+  function drawSummaryRow(label, value, bold) {
+    needSpace(lh);
+    const vw = fontBold.widthOfTextAtSize(value, sz);
+    const lw2 = fontBody.widthOfTextAtSize(label, szSm);
+    pg.drawText(label, {x:summaryRight - vw - lw2 - 12, y, size:szSm, font:fontBody, color:gray});
+    pg.drawText(value, {x:summaryRight - vw, y, size:sz, font: bold ? fontBold : fontBody, color: bold ? accent : black});
+    y -= lh;
+  }
+
+  drawSummaryRow(S('total-hours') + ':', fmtHM(grandMins), true);
+  drawSummaryRow(S('total-hours-decimal') + ':', decHours, false);
+
+  const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
+  shownCodes.forEach(c => {
+    const dispKey = `display-${state.lang}`;
+    const disp = c[dispKey] || c['display-en'] || c.code;
+    drawSummaryRow(`${S('of-which')} ${disp}:`, fmtHM(codeTotals[c.code] || 0), false);
+  });
+
+  // UNP note
+  const unpMins = codeTotals['UNP'] || 0;
+  if (unpMins > 0 && grandMins > 0) {
+    needSpace(lh * 3);
+    y -= 4;
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+    y -= lh;
+    const qty = (1 - unpMins / grandMins).toFixed(6);
+    const noteTemplate = S('note-unpaid');
+    const noteText = noteTemplate
+      .replace('{x}', fmtHM(unpMins))
+      .replace('{y}', fmtHM(grandMins))
+      .replace('{q}', qty);
+    noteText.split('\n').forEach(line => {
+      const wrapped = wrapText(line, fontBody, szSm, W);
+      wrapped.forEach(wl => {
+        needSpace(lh);
+        pg.drawText(wl, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+        y -= lh;
+      });
+    });
+  }
+
+  // Signature block
+  needSpace(lh * 6);
+  y -= lh;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+  y -= lh * 3;
+
+  const sigHalfW = W * 0.42;
+  const sig2X = M.left + W - sigHalfW;
+
+  // Sig lines
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+sigHalfW,y}, thickness:0.5, color:black});
+  pg.drawLine({start:{x:sig2X,y}, end:{x:sig2X+sigHalfW,y}, thickness:0.5, color:black});
+  y += 3;
+  pg.drawText(S('signature-employee'), {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
+  pg.drawText(S('signature-authorised'), {x:sig2X, y, size:szSm-1, font:fontBody, color:gray});
+  y -= lh + 4;
+
+  const dateLabelW = fontBody.widthOfTextAtSize(S('signature-date') + ':', szSm-1);
+  pg.drawText(S('signature-date') + ':', {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
+  pg.drawLine({start:{x:M.left+dateLabelW+4,y:y-1}, end:{x:M.left+sigHalfW,y:y-1}, thickness:0.5, color:black});
+  pg.drawText(S('signature-date') + ':', {x:sig2X, y, size:szSm-1, font:fontBody, color:gray});
+  pg.drawLine({start:{x:sig2X+dateLabelW+4,y:y-1}, end:{x:sig2X+sigHalfW,y:y-1}, thickness:0.5, color:black});
+
+  // Footers
+  const totalPages = pages.length;
+  const now = new Date();
+  const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  pages.forEach((p, i) => {
+    const fy = M.bottom - 30;
+    p.drawLine({start:{x:M.left,y:fy+18}, end:{x:M.left+W,y:fy+18}, thickness:0.5, color:lineCol});
+    const footerLeft = CFG.footer || 'Timesheet';
+    p.drawText(footerLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    if (state.employee) p.drawText(state.employee, {x:M.left, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+    const pgStr = `Page ${i+1}/${totalPages}`;
+    const pgWw = fontBody.widthOfTextAtSize(pgStr, szSm-1);
+    p.drawText(pgStr, {x:M.left+W-pgWw, y:fy, size:szSm-1, font:fontBody, color:gray});
+    const prStr = `Printed: ${printed}`;
+    const prW = fontBody.widthOfTextAtSize(prStr, szSm-1);
+    p.drawText(prStr, {x:M.left+W-prW, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+  });
+
+  const pdfBytes = await doc.save();
+  const blob = new Blob([pdfBytes], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const emp = (state.employee || 'employee').replace(/\s+/g,'_');
+  a.download = `timesheet_${emp}_${state.periodFrom}_${state.periodTo}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========== GENERATE HANDLER ==========
+async function onGenerate() {
+  validationResult = runValidation();
+  const valBox = $('#val-box');
+  renderValBox(valBox);
+  const genBtn = $('#gen-btn');
+  if (validationResult.errors.length) {
+    updateGenBtn(genBtn);
+    valBox.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  genBtn.disabled = true;
+  const origText = genBtn.textContent;
+  genBtn.textContent = S('generating');
+  try {
+    await generatePDF();
+  } catch(e) {
+    alert('Error generating PDF: ' + e.message);
+    console.error(e);
+  }
+  genBtn.disabled = false;
+  genBtn.textContent = origText;
+}
+
+// ========== INIT ==========
+async function init() {
+  try {
+    await loadConfig();
+
+    // Restore preferences
+    const savedLang = localStorage.getItem('timesheet-lang');
+    const savedEmp  = localStorage.getItem('timesheet-employee');
+    const savedType = localStorage.getItem('timesheet-type');
+    if (savedLang) state.lang = savedLang;
+    if (savedEmp)  state.employee = savedEmp;
+    if (savedType) state.empType = savedType;
+
+    const p = defaultPeriod();
+    state.periodFrom = p.from;
+    state.periodTo   = p.to;
+
+    const restored = loadSavedState();
+    if (!restored || !state.periodFrom || Object.keys(state.days).length === 0) {
+      state.days = buildDefaultDays(state.periodFrom, state.periodTo, state.empType);
+    }
+
+    render();
+
+    document.addEventListener('input', scheduleAutoSave);
+    document.addEventListener('change', scheduleAutoSave);
+  } catch(e) {
+    $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err);padding:40px">Failed to load: ${e.message}</p></div>`;
+    console.error(e);
+  }
+}
+
+init();
+})();
+</script>
+</body>
+</html>
