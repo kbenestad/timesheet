@@ -12,6 +12,7 @@ font-size: 10
 accent-colour: "#1a3a5c"
 footer: "Confidential"
 muted-background: yes
+needssignature: yes
 default-work-code: REG
 
 employee-types:

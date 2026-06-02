@@ -120,6 +120,12 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 .action-row { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
 .action-row .spacer { flex: 1; }
 
+/* Signature area */
+.sig-section { margin-top: 24px; }
+.sig-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; letter-spacing: .3px; }
+.sig-canvas { border: 1px solid var(--border); border-radius: 4px; cursor: crosshair; background: #fff; display: block; max-width: 100%; touch-action: none; }
+.sig-controls { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+
 /* Modal */
 .modal-overlay { position: fixed; top:0; right:0; bottom:0; left:0; background: rgba(0,0,0,.45); z-index: 9999; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: #fff; border-radius: 8px; padding: 24px 28px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
@@ -540,6 +546,105 @@ function hexWithOpacity(hex, opacity) {
   return `rgba(${r},${g},${b},${opacity})`;
 }
 
+// ========== SIGNATURE ==========
+let signatureDataUrl = null;
+
+function loadSignature() {
+  signatureDataUrl = localStorage.getItem('ts-signature') || null;
+}
+
+function saveSignature(dataUrl) {
+  signatureDataUrl = dataUrl || null;
+  if (dataUrl) localStorage.setItem('ts-signature', dataUrl);
+  else localStorage.removeItem('ts-signature');
+}
+
+function needsSignature() {
+  return CFG.needssignature === true || CFG.needssignature === 'yes';
+}
+
+function renderSignatureArea(wrap) {
+  if (!needsSignature()) return;
+
+  const section = el('div', {className:'sig-section'});
+  section.appendChild(el('div', {className:'sig-label'}, S('signature-employee')));
+
+  const canvas = el('canvas', {width:500, height:110, className:'sig-canvas'});
+  const ctx = canvas.getContext('2d');
+
+  if (signatureDataUrl) {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = signatureDataUrl;
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return [(src.clientX - rect.left) * sx, (src.clientY - rect.top) * sy];
+  }
+
+  let drawing = false, lx = 0, ly = 0;
+
+  function startDraw(e) {
+    drawing = true;
+    [lx, ly] = getPos(e);
+  }
+  function moveDraw(e) {
+    if (!drawing) return;
+    const [x, y] = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, y);
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.stroke();
+    [lx, ly] = [x, y];
+    saveSignature(canvas.toDataURL('image/png'));
+  }
+  function stopDraw() { drawing = false; }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', moveDraw);
+  canvas.addEventListener('mouseup', stopDraw);
+  canvas.addEventListener('mouseleave', stopDraw);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); }, {passive:false});
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); moveDraw(e);  }, {passive:false});
+  canvas.addEventListener('touchend', stopDraw);
+
+  const clearBtn = el('button', {type:'button', className:'btn btn-secondary'}, 'Clear');
+  clearBtn.style.cssText = 'font-size:12px;padding:4px 12px';
+  clearBtn.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    saveSignature(null);
+  });
+
+  const fileInput = el('input', {type:'file', accept:'image/*'});
+  fileInput.style.display = 'none';
+  const uploadBtn = el('button', {type:'button', className:'btn btn-secondary'}, 'Upload image');
+  uploadBtn.style.cssText = 'font-size:12px;padding:4px 12px';
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
+        const dw = img.width * scale, dh = img.height * scale;
+        ctx.drawImage(img, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+        saveSignature(canvas.toDataURL('image/png'));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const controls = el('div', {className:'sig-controls'});
+  controls.append(clearBtn, uploadBtn, fileInput);
+  section.append(canvas, controls);
+  wrap.appendChild(section);
+}
+
 // ========== RENDER ==========
 let validationResult = null;
 
@@ -676,6 +781,8 @@ function render() {
 
   updateGenBtn(genBtn);
   wrap.appendChild(el('div', {className:'action-row'}, [valBtn, el('span', {className:'spacer'}), genBtn]));
+
+  renderSignatureArea(wrap);
 
   app.appendChild(wrap);
 }
@@ -1350,27 +1457,38 @@ async function generatePDF() {
   }
 
   // Signature block
-  needSpace(lh * 6);
-  y -= lh;
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
-  y -= lh * 3;
+  if (needsSignature()) {
+    const sigHalfW = W * 0.42;
+    const sig2X = M.left + W - sigHalfW;
+    const sigImgH = 28;
+    needSpace(hdrLh * 2 + sigImgH + hdrLh * 2 + 10);
+    y -= hdrLh;
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+    y -= sigImgH + 4;
 
-  const sigHalfW = W * 0.42;
-  const sig2X = M.left + W - sigHalfW;
+    // Employee signature image or blank space
+    if (signatureDataUrl) {
+      const b64 = signatureDataUrl.split(',')[1];
+      const sigBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const sigImg = await doc.embedPng(sigBytes);
+      const scale = Math.min(sigHalfW / sigImg.width, sigImgH / sigImg.height, 1);
+      pg.drawImage(sigImg, {x:M.left, y, width:sigImg.width*scale, height:sigImg.height*scale});
+    }
 
-  // Sig lines
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+sigHalfW,y}, thickness:0.5, color:black});
-  pg.drawLine({start:{x:sig2X,y}, end:{x:sig2X+sigHalfW,y}, thickness:0.5, color:black});
-  y += 3;
-  pg.drawText(S('signature-employee'), {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
-  pg.drawText(S('signature-authorised'), {x:sig2X, y, size:szSm-1, font:fontBody, color:gray});
-  y -= lh + 4;
+    y -= 4;
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+sigHalfW,y}, thickness:0.5, color:black});
+    pg.drawLine({start:{x:sig2X,y}, end:{x:sig2X+sigHalfW,y}, thickness:0.5, color:black});
+    y += 3;
+    pg.drawText(S('signature-employee'),   {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
+    pg.drawText(S('signature-authorised'), {x:sig2X,  y, size:szSm-1, font:fontBody, color:gray});
+    y -= hdrLh + 4;
 
-  const dateLabelW = fontBody.widthOfTextAtSize(S('signature-date') + ':', szSm-1);
-  pg.drawText(S('signature-date') + ':', {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
-  pg.drawLine({start:{x:M.left+dateLabelW+4,y:y-1}, end:{x:M.left+sigHalfW,y:y-1}, thickness:0.5, color:black});
-  pg.drawText(S('signature-date') + ':', {x:sig2X, y, size:szSm-1, font:fontBody, color:gray});
-  pg.drawLine({start:{x:sig2X+dateLabelW+4,y:y-1}, end:{x:sig2X+sigHalfW,y:y-1}, thickness:0.5, color:black});
+    const dateLabelW = fontBody.widthOfTextAtSize(S('signature-date') + ':', szSm-1);
+    pg.drawText(S('signature-date') + ':', {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
+    pg.drawLine({start:{x:M.left+dateLabelW+4,y:y-1}, end:{x:M.left+sigHalfW,y:y-1}, thickness:0.5, color:black});
+    pg.drawText(S('signature-date') + ':', {x:sig2X,  y, size:szSm-1, font:fontBody, color:gray});
+    pg.drawLine({start:{x:sig2X+dateLabelW+4,y:y-1}, end:{x:sig2X+sigHalfW,y:y-1}, thickness:0.5, color:black});
+  }
 
   // Footers
   const totalPages = pages.length;
@@ -1429,6 +1547,7 @@ async function onGenerate() {
 async function init() {
   try {
     await loadConfig();
+    loadSignature();
 
     // Restore preferences
     const savedLang = localStorage.getItem('timesheet-lang');
