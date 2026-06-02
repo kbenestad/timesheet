@@ -262,7 +262,7 @@ function holidayObj(dateStr) {
 
 function isWorkday(dateStr) {
   const dow = DOW_NAMES[dateStrDow(dateStr)];
-  return (CFG['workdays'] || CFG['work-week'] || ['Mon','Tue','Wed','Thu','Fri']).includes(dow);
+  return (CFG['workdays'] || ['Mon','Tue','Wed','Thu','Fri']).includes(dow);
 }
 
 // ========== STATE ==========
@@ -284,8 +284,8 @@ function empTypeObj(code) {
   return (CFG['employee-types'] || []).find(t => t.code === code) || null;
 }
 
-function workStart() { return CFG['workhours-from'] || CFG['work-day-start'] || '09:00'; }
-function workEnd()   { return CFG['workhours-to']   || CFG['work-day-end']   || '17:00'; }
+function workStart() { return CFG['workhours-from'] || '09:00'; }
+function workEnd()   { return CFG['workhours-to']   || '17:00'; }
 
 function defaultRowsForDay(dateStr, empType) {
   const wstart = workStart();
