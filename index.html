@@ -781,6 +781,7 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
           row.timeOut = workEnd();
         }
         row.desc = '';
+        row._locked = true;
         const uk = rowKey(dateStr, rowIndex);
         delete state.unlocks[uk];
         const block = $(`#day-${dateStr}`);
