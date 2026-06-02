@@ -1219,12 +1219,11 @@ async function generatePDF() {
 
   const fontBody = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const sz   = 8;
-  const szSm = 7;
+  const sz   = 9;
+  const szSm = 8;
   const szLg = 13;
-  const rowH = 13;   // height of a data row (background rect)
-  const lh   = 12;   // line advance for data rows
-  const hdrLh = 11;  // line advance for header area
+  const lh    = 14;  // line advance for data rows
+  const hdrLh = 12;  // line advance for header area
 
   const accent  = parseHexColor(CFG['accent-colour'] || '#1a3a5c');
   const black   = rgb(0.13, 0.13, 0.13);
@@ -1271,11 +1270,11 @@ async function generatePDF() {
   }
 
   function drawRowBackground(rowY, bgHex, borderHex) {
-    const rectY = rowY - 3;
+    const rectY = rowY - 2;
     const bg = bgHex ? hexToRgb(bgHex) : null;
     const bdr = borderHex ? hexToRgb(borderHex) : null;
-    if (bg) pg.drawRectangle({x:M.left, y:rectY, width:W, height:rowH, color:bg, borderWidth:0});
-    if (bdr) pg.drawRectangle({x:M.left, y:rectY, width:BORDER_W, height:rowH, color:bdr, borderWidth:0});
+    if (bg) pg.drawRectangle({x:M.left, y:rectY, width:W, height:lh, color:bg, borderWidth:0});
+    if (bdr) pg.drawRectangle({x:M.left, y:rectY, width:BORDER_W, height:lh, color:bdr, borderWidth:0});
   }
 
   // Page 1
@@ -1343,7 +1342,7 @@ async function generatePDF() {
       const row = rows[ri];
       const isFirst = ri === 0;
       const isLocked = isRowLocked(ds, ri, row);
-      needSpace(rowH + 2);
+      needSpace(lh + 2);
 
       const rowY = y;
       const textColor = isLocked ? lgray : black;
@@ -1458,36 +1457,44 @@ async function generatePDF() {
 
   // Signature block
   if (needsSignature()) {
-    const sigHalfW = W * 0.42;
+    const sigHalfW = W * 0.45;
     const sig2X = M.left + W - sigHalfW;
-    const sigImgH = 28;
-    needSpace(hdrLh * 2 + sigImgH + hdrLh * 2 + 10);
+    const sigImgH = 22;
+    needSpace(hdrLh * 4 + sigImgH);
     y -= hdrLh;
-    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
-    y -= sigImgH + 4;
 
-    // Employee signature image or blank space
+    const empLabelTxt = S('signature-employee') + ':';
+    const empLabelW = fontBody.widthOfTextAtSize(empLabelTxt, szSm);
+    pg.drawText(empLabelTxt, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+
+    // Signature image inline, right of label
     if (signatureDataUrl) {
       const b64 = signatureDataUrl.split(',')[1];
       const sigBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       const sigImg = await doc.embedPng(sigBytes);
-      const scale = Math.min(sigHalfW / sigImg.width, sigImgH / sigImg.height, 1);
-      pg.drawImage(sigImg, {x:M.left, y, width:sigImg.width*scale, height:sigImg.height*scale});
+      const maxSigW = sigHalfW - empLabelW - 8;
+      const scale = Math.min(maxSigW / sigImg.width, sigImgH / sigImg.height, 1);
+      pg.drawImage(sigImg, {x:M.left + empLabelW + 6, y:y - sigImgH + sz, width:sigImg.width*scale, height:sigImg.height*scale});
+    } else {
+      pg.drawLine({start:{x:M.left+empLabelW+4, y:y-1}, end:{x:M.left+sigHalfW, y:y-1}, thickness:0.5, color:black});
     }
 
-    y -= 4;
-    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+sigHalfW,y}, thickness:0.5, color:black});
-    pg.drawLine({start:{x:sig2X,y}, end:{x:sig2X+sigHalfW,y}, thickness:0.5, color:black});
-    y += 3;
-    pg.drawText(S('signature-employee'),   {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
-    pg.drawText(S('signature-authorised'), {x:sig2X,  y, size:szSm-1, font:fontBody, color:gray});
-    y -= hdrLh + 4;
+    // Authorised signature — blank line
+    const authLabelTxt = S('signature-authorised') + ':';
+    const authLabelW = fontBody.widthOfTextAtSize(authLabelTxt, szSm);
+    pg.drawText(authLabelTxt, {x:sig2X, y, size:szSm, font:fontBody, color:gray});
+    pg.drawLine({start:{x:sig2X+authLabelW+4, y:y-1}, end:{x:sig2X+sigHalfW, y:y-1}, thickness:0.5, color:black});
 
-    const dateLabelW = fontBody.widthOfTextAtSize(S('signature-date') + ':', szSm-1);
-    pg.drawText(S('signature-date') + ':', {x:M.left, y, size:szSm-1, font:fontBody, color:gray});
-    pg.drawLine({start:{x:M.left+dateLabelW+4,y:y-1}, end:{x:M.left+sigHalfW,y:y-1}, thickness:0.5, color:black});
-    pg.drawText(S('signature-date') + ':', {x:sig2X,  y, size:szSm-1, font:fontBody, color:gray});
-    pg.drawLine({start:{x:sig2X+dateLabelW+4,y:y-1}, end:{x:sig2X+sigHalfW,y:y-1}, thickness:0.5, color:black});
+    y -= hdrLh + sigImgH - sz;
+
+    // Date row — print date for employee, blank line for authorised
+    const dateLabelTxt = S('signature-date') + ':';
+    const dateLabelW = fontBody.widthOfTextAtSize(dateLabelTxt, szSm);
+    pg.drawText(dateLabelTxt, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+    pg.drawText(printed, {x:M.left + dateLabelW + 4, y, size:szSm, font:fontBody, color:black});
+
+    pg.drawText(dateLabelTxt, {x:sig2X, y, size:szSm, font:fontBody, color:gray});
+    pg.drawLine({start:{x:sig2X+dateLabelW+4, y:y-1}, end:{x:sig2X+sigHalfW, y:y-1}, thickness:0.5, color:black});
   }
 
   // Footers
