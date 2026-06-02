@@ -14,6 +14,19 @@ footer: "Confidential"
 muted-background: yes
 default-work-code: REG
 
+employee-types:
+  - code: hourly
+    display: "Hourly"
+    prefilled: non-working
+
+  - code: monthly
+    display: "Monthly"
+    prefilled: working
+
+  - code: freelance
+    display: "Freelance"
+    prefilled: non-working
+
 work-week: [Mon, Tue, Wed, Thu, Fri]
 work-day-start: "09:00"
 work-day-end: "17:00"
@@ -29,7 +42,7 @@ codes:
     display-vi: "Ngày không làm việc"
     counthours: no
     lockstate: locked
-    employee-types: [hourly]
+    employee-types: [hourly, freelance]
     colour-border: "#393939"
     colour-bg: "#d7d7d7"
 
@@ -38,7 +51,7 @@ codes:
     display-vi: "Thường"
     counthours: yes
     lockstate: unlocked
-    employee-types: [salaried, hourly]
+    employee-types: [monthly, hourly, freelance]
     colour-border: "#0078d7"
     colour-bg: "#cce4f7"
     hint-en: "Please describe your activities"
@@ -49,7 +62,7 @@ codes:
     display-vi: "Nghỉ phép"
     counthours: yes
     lockstate: locked
-    employee-types: [salaried, hourly]
+    employee-types: [monthly, hourly]
     colour-border-fullday: "#ed616f"
     colour-bg-fullday: "#ffd9d9"
     colour-border-partialday: "#ffb900"
@@ -60,7 +73,7 @@ codes:
     display-vi: "Nghỉ có lương khác"
     counthours: yes
     lockstate: unlocked
-    employee-types: [salaried, hourly]
+    employee-types: [monthly, hourly]
     colour-border: "#a4252c"
     colour-bg: "#edd4d5"
     hint-en: "Please enter type of leave"
@@ -71,7 +84,7 @@ codes:
     display-vi: "Nghỉ không lương"
     counthours: yes
     lockstate: locked
-    employee-types: [salaried]
+    employee-types: [monthly]
     colour-border: "#393939"
     colour-bg: "#d7d7d7"
 
@@ -80,7 +93,7 @@ codes:
     display-vi: "Ngày lễ"
     counthours: yes
     lockstate: locked
-    employee-types: [salaried, hourly]
+    employee-types: [monthly, hourly, freelance]
     colour-border: "#8cbd18"
     colour-bg: "#e8f2d1"
 

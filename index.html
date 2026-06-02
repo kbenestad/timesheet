@@ -268,7 +268,7 @@ function isWorkday(dateStr) {
 // ========== STATE ==========
 const state = {
   employee: '',
-  empType: 'salaried',
+  empType: '',
   lang: 'en',
   periodFrom: '',
   periodTo: '',
@@ -280,24 +280,32 @@ const state = {
 function rowKey(dateStr, idx) { return `${dateStr}-${idx}`; }
 
 // ========== ROW DEFAULTS ==========
+function empTypeObj(code) {
+  return (CFG['employee-types'] || []).find(t => t.code === code) || null;
+}
+
 function defaultRowsForDay(dateStr, empType) {
   const wstart = CFG['work-day-start'] || '09:00';
   const wend   = CFG['work-day-end']   || '17:00';
   const weekend = !isWorkday(dateStr);
   const holiday = isHoliday(dateStr);
+  const defCode = CFG['default-work-code'] || 'REG';
 
-  if (empType === 'hourly') {
-    return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
-  }
-
-  // salaried
   if (weekend) {
     return [{ code: 'WEEKEND', timeIn: '', timeOut: '', desc: '', _locked: true }];
   }
   if (holiday) {
     return [{ code: 'HOL', timeIn: wstart, timeOut: wend, desc: '', _locked: true }];
   }
-  return [{ code: 'REG', timeIn: wstart, timeOut: wend, desc: '', _locked: false }];
+
+  const tObj = empTypeObj(empType);
+  const prefilled = tObj ? tObj.prefilled : 'working';
+
+  if (prefilled === 'non-working') {
+    return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
+  }
+  // prefilled === 'working' (default)
+  return [{ code: defCode, timeIn: wstart, timeOut: wend, desc: '', _locked: false }];
 }
 
 function buildDefaultDays(from, to, empType) {
@@ -364,7 +372,7 @@ function computeTotals() {
       if (!code || code === 'WEEKEND') continue;
       const cObj = codeObj(code);
       if (!cObj || !cObj.counthours) continue;
-      if (code === 'HOL' && empType !== 'salaried') continue;
+      if (code === 'HOL' && !codesForType(empType).find(c => c.code === 'HOL')) continue;
       const mins = calcRowMins(row);
       if (mins == null || mins <= 0) continue;
       codeTotals[code] = (codeTotals[code] || 0) + mins;
@@ -546,9 +554,10 @@ function render() {
   });
 
   const empTypeSelect = el('select');
-  ['salaried','hourly'].forEach(t => {
-    const key = t === 'salaried' ? 'option-salaried' : 'option-hourly';
-    empTypeSelect.appendChild(el('option', {value:t, ...(state.empType === t ? {selected:''} : {})}, S(key)));
+  const empTypes = CFG['employee-types'] || [{code:'salaried', display:'Salaried'}, {code:'hourly', display:'Hourly'}];
+  empTypes.forEach(t => {
+    const disp = (typeof t.display === 'object') ? (t.display[state.lang] || t.display['en'] || t.code) : (t.display || t.code);
+    empTypeSelect.appendChild(el('option', {value: t.code, ...(state.empType === t.code ? {selected:''} : {})}, disp));
   });
   empTypeSelect.addEventListener('change', () => {
     state.empType = empTypeSelect.value;
@@ -730,11 +739,7 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   if (!locked) {
     // For continuation rows, allow any code for the employee type
     // Weekend/NON can't be user-selected
-    const available = codesForType(state.empType).filter(c => {
-      if (state.empType === 'salaried' && c.code === 'NON') return false;
-      if (state.empType === 'hourly'   && c.code === 'UNP') return false;
-      return true;
-    });
+    const available = codesForType(state.empType);
     if (!row.code) codeEl.appendChild(el('option', {value:''}, ''));
     available.forEach(c => {
       const dispKey = `display-${state.lang}`;
@@ -1100,7 +1105,8 @@ async function generatePDF() {
   y -= lh;
   pg.drawText(state.employee || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
   pg.drawText(`${state.periodFrom}  –  ${state.periodTo}`, {x:M.left+c2, y, size:sz, font:fontBody, color:black});
-  const typeDisp = state.empType === 'salaried' ? S('option-salaried') : S('option-hourly');
+  const tObj = empTypeObj(state.empType);
+  const typeDisp = tObj ? ((typeof tObj.display === 'object') ? (tObj.display[state.lang] || tObj.display['en'] || state.empType) : (tObj.display || state.empType)) : state.empType;
   pg.drawText(typeDisp, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
   y -= lh + 4;
 
@@ -1328,7 +1334,10 @@ async function init() {
     const savedType = localStorage.getItem('timesheet-type');
     if (savedLang) state.lang = savedLang;
     if (savedEmp)  state.employee = savedEmp;
-    if (savedType) state.empType = savedType;
+    // Default empType to first configured type if not saved or no longer valid
+    const validTypes = (CFG['employee-types'] || []).map(t => t.code);
+    if (savedType && validTypes.includes(savedType)) state.empType = savedType;
+    else if (validTypes.length) state.empType = validTypes[0];
 
     const p = defaultPeriod();
     state.periodFrom = p.from;
