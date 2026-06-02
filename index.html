@@ -301,10 +301,12 @@ function defaultRowsForDay(dateStr, empType) {
     return [{ code: 'WEEKEND', timeIn: '', timeOut: '', desc: '', _locked: true }];
   }
   if (holiday) {
+    const hObj = holidayObj(dateStr);
+    const hName = hObj ? (hObj[`display-${state.lang}`] || hObj['display-en'] || '') : '';
     if (prefilled === 'non-working') {
-      return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
+      return [{ code: 'NON', timeIn: '', timeOut: '', desc: hName, _locked: true }];
     }
-    return [{ code: 'HOL', timeIn: wstart, timeOut: wend, desc: '', _locked: true }];
+    return [{ code: 'HOL', timeIn: wstart, timeOut: wend, desc: hName, _locked: true }];
   }
   if (prefilled === 'non-working') {
     return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
