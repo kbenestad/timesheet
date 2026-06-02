@@ -35,6 +35,28 @@ holidays:
   - date: "2025-01-01"
     display-en: "New Year's Day"
     display-vi: "Tết Dương lịch"
+  - date: "2025-04-30"
+    display-en: "Reunification Day"
+    display-vi: "Ngày Thống nhất"
+  - date: "2025-05-01"
+    display-en: "International Labour Day"
+    display-vi: "Ngày Quốc tế Lao động"
+  - date: "2025-09-02"
+    display-en: "National Day"
+    display-vi: "Ngày Quốc khánh"
+
+  - date: "2026-01-01"
+    display-en: "New Year's Day"
+    display-vi: "Tết Dương lịch"
+  - date: "2026-04-30"
+    display-en: "Reunification Day"
+    display-vi: "Ngày Thống nhất"
+  - date: "2026-05-01"
+    display-en: "International Labour Day"
+    display-vi: "Ngày Quốc tế Lao động"
+  - date: "2026-09-02"
+    display-en: "National Day"
+    display-vi: "Ngày Quốc khánh"
 
 codes:
   - code: NON
