@@ -27,9 +27,9 @@ employee-types:
     display: "Freelance"
     prefilled: non-working
 
-work-week: [Mon, Tue, Wed, Thu, Fri]
-work-day-start: "09:00"
-work-day-end: "17:00"
+workdays: [Mon, Tue, Wed, Thu, Fri]
+workhours-from: "09:00"
+workhours-to: "17:00"
 
 holidays:
   - date: "2025-01-01"

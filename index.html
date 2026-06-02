@@ -262,7 +262,7 @@ function holidayObj(dateStr) {
 
 function isWorkday(dateStr) {
   const dow = DOW_NAMES[dateStrDow(dateStr)];
-  return (CFG['work-week'] || ['Mon','Tue','Wed','Thu','Fri']).includes(dow);
+  return (CFG['workdays'] || CFG['work-week'] || ['Mon','Tue','Wed','Thu','Fri']).includes(dow);
 }
 
 // ========== STATE ==========
@@ -284,23 +284,28 @@ function empTypeObj(code) {
   return (CFG['employee-types'] || []).find(t => t.code === code) || null;
 }
 
+function workStart() { return CFG['workhours-from'] || CFG['work-day-start'] || '09:00'; }
+function workEnd()   { return CFG['workhours-to']   || CFG['work-day-end']   || '17:00'; }
+
 function defaultRowsForDay(dateStr, empType) {
-  const wstart = CFG['work-day-start'] || '09:00';
-  const wend   = CFG['work-day-end']   || '17:00';
+  const wstart = workStart();
+  const wend   = workEnd();
   const weekend = !isWorkday(dateStr);
   const holiday = isHoliday(dateStr);
   const defCode = CFG['default-work-code'] || 'REG';
+
+  const tObj = empTypeObj(empType);
+  const prefilled = tObj ? tObj.prefilled : 'working';
 
   if (weekend) {
     return [{ code: 'WEEKEND', timeIn: '', timeOut: '', desc: '', _locked: true }];
   }
   if (holiday) {
+    if (prefilled === 'non-working') {
+      return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
+    }
     return [{ code: 'HOL', timeIn: wstart, timeOut: wend, desc: '', _locked: true }];
   }
-
-  const tObj = empTypeObj(empType);
-  const prefilled = tObj ? tObj.prefilled : 'working';
-
   if (prefilled === 'non-working') {
     return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
   }
@@ -409,8 +414,8 @@ function runValidation() {
   const errors = []; // blocking
   const warnings = []; // non-blocking
 
-  const wstartM = parseHM(CFG['work-day-start'] || '09:00');
-  const wendM   = parseHM(CFG['work-day-end']   || '17:00');
+  const wstartM = parseHM(workStart());
+  const wendM   = parseHM(workEnd());
   const stdMins = (wendM != null && wstartM != null) ? (wendM - wstartM) : null;
 
   const sortedDates = Object.keys(state.days).sort();
@@ -741,6 +746,21 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
     // Weekend/NON can't be user-selected
     const available = codesForType(state.empType);
     if (!row.code) codeEl.appendChild(el('option', {value:''}, ''));
+    // If this row was originally a weekend/non-working day, offer a way to go back
+    if (row._locked) {
+      const revertLabel = row.code === 'WEEKEND' || !isWorkday(dateStr)
+        ? (state.lang === 'vi' ? 'Cuối tuần' : 'Weekend')
+        : null;
+      // Will be added below only if original was weekend
+      if (!isWorkday(dateStr)) {
+        codeEl.appendChild(el('option', {value:'__WEEKEND__'}, revertLabel));
+      } else {
+        // Non-working day locked originally — allow revert to NON
+        const nonObj = codeObj('NON');
+        const nonDisp = nonObj ? (nonObj[`display-${state.lang}`] || nonObj['display-en'] || 'NON') : 'Non-working day';
+        codeEl.appendChild(el('option', {value:'__NON__'}, nonDisp));
+      }
+    }
     available.forEach(c => {
       const dispKey = `display-${state.lang}`;
       const disp = c[dispKey] || c['display-en'] || c.code;
@@ -748,11 +768,11 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
     });
     codeEl.addEventListener('change', () => {
       const newCode = codeEl.value;
+      const revert = newCode === '__WEEKEND__' || newCode === '__NON__';
       const newCObj = codeObj(newCode);
-      const becomesLocked = newCObj && newCObj.lockstate === 'locked';
-      row.code = newCode;
+      const becomesLocked = revert || (newCObj && newCObj.lockstate === 'locked');
+      row.code = revert ? (newCode === '__WEEKEND__' ? 'WEEKEND' : 'NON') : newCode;
       if (becomesLocked) {
-        // Re-lock: clear times and remove unlock override, then redraw
         row.timeIn  = '';
         row.timeOut = '';
         row.desc    = '';
@@ -761,6 +781,12 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
         const block = $(`#day-${dateStr}`);
         if (block) redrawDayBlock(block, dateStr);
       } else {
+        // Auto-fill work hours if code counts hours
+        if (newCObj && newCObj.counthours) {
+          if (!row.timeIn)  { row.timeIn  = workStart(); timeInEl.value  = row.timeIn; }
+          if (!row.timeOut) { row.timeOut = workEnd();   timeOutEl.value = row.timeOut; }
+          updateHoursCell(rowEl, row);
+        }
         applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
         updateDescHint(descEl, row);
       }
@@ -854,8 +880,8 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
         if (chk.checked) {
           state.unlocks[unlockKey] = true;
           const defCode = CFG['default-work-code'] || 'REG';
-          const wstart = CFG['work-day-start'] || '09:00';
-          const wend   = CFG['work-day-end']   || '17:00';
+          const wstart = workStart();
+          const wend   = workEnd();
           row.code   = defCode;
           row.timeIn  = wstart;
           row.timeOut = wend;
