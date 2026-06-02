@@ -710,6 +710,7 @@ function redrawDayBlock(block, dateStr) {
 
 function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   const locked = isRowLocked(dateStr, rowIndex, row);
+  const timeLocked = locked && totalRows === 1;
   const rowEl = el('div', {className: 'ts-row' + (isFirst ? '' : ' continuation')});
 
   // Date cell
@@ -722,7 +723,7 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   rowEl.appendChild(dateCellEl);
 
   // Time In
-  const timeInEl = el('input', {type:'time', value: row.timeIn || '', ...(locked ? {disabled:''} : {})});
+  const timeInEl = el('input', {type:'time', value: row.timeIn || '', ...(timeLocked ? {disabled:''} : {})});
   timeInEl.addEventListener('change', () => {
     row.timeIn = timeInEl.value;
     updateHoursCell(rowEl, row);
@@ -732,7 +733,7 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   rowEl.appendChild(timeInEl);
 
   // Time Out
-  const timeOutEl = el('input', {type:'time', value: row.timeOut || '', ...(locked ? {disabled:''} : {})});
+  const timeOutEl = el('input', {type:'time', value: row.timeOut || '', ...(timeLocked ? {disabled:''} : {})});
   timeOutEl.addEventListener('change', () => {
     row.timeOut = timeOutEl.value;
     updateHoursCell(rowEl, row);
