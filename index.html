@@ -773,9 +773,14 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
       const becomesLocked = revert || (newCObj && newCObj.lockstate === 'locked');
       row.code = revert ? (newCode === '__WEEKEND__' ? 'WEEKEND' : 'NON') : newCode;
       if (becomesLocked) {
-        row.timeIn  = '';
-        row.timeOut = '';
-        row.desc    = '';
+        if (revert || !newCObj || !newCObj.counthours) {
+          row.timeIn  = '';
+          row.timeOut = '';
+        } else {
+          row.timeIn  = workStart();
+          row.timeOut = workEnd();
+        }
+        row.desc = '';
         const uk = rowKey(dateStr, rowIndex);
         delete state.unlocks[uk];
         const block = $(`#day-${dateStr}`);
