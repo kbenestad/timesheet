@@ -12,6 +12,7 @@ font-size: 10
 accent-colour: "#1a3a5c"
 footer: "Confidential"
 muted-background: yes
+default-work-code: REG
 
 work-week: [Mon, Tue, Wed, Thu, Fri]
 work-day-start: "09:00"

@@ -742,10 +742,23 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
       codeEl.appendChild(el('option', {value: c.code, ...(row.code === c.code ? {selected:''} : {})}, disp));
     });
     codeEl.addEventListener('change', () => {
-      row.code = codeEl.value;
-      applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
-      // Update hint
-      updateDescHint(descEl, row);
+      const newCode = codeEl.value;
+      const newCObj = codeObj(newCode);
+      const becomesLocked = newCObj && newCObj.lockstate === 'locked';
+      row.code = newCode;
+      if (becomesLocked) {
+        // Re-lock: clear times and remove unlock override, then redraw
+        row.timeIn  = '';
+        row.timeOut = '';
+        row.desc    = '';
+        const uk = rowKey(dateStr, rowIndex);
+        delete state.unlocks[uk];
+        const block = $(`#day-${dateStr}`);
+        if (block) redrawDayBlock(block, dateStr);
+      } else {
+        applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
+        updateDescHint(descEl, row);
+      }
       scheduleAutoSave();
       refreshSummary();
     });
@@ -826,20 +839,31 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   }
   rowEl.appendChild(actionEl);
 
-  // Unlock checkbox (only for locked rows)
+  // Unlock checkbox (only for locked rows that haven't been unlocked yet)
   if (row._locked) {
     const unlockKey = rowKey(dateStr, rowIndex);
-    const unlockWrap = el('label', {className:'unlock-wrap', title: S('unlock-label')});
-    const chk = el('input', {type:'checkbox', ...(state.unlocks[unlockKey] ? {checked:''} : {})});
-    chk.addEventListener('change', () => {
-      if (chk.checked) state.unlocks[unlockKey] = true;
-      else delete state.unlocks[unlockKey];
-      const block = $(`#day-${dateStr}`);
-      if (block) redrawDayBlock(block, dateStr);
-      scheduleAutoSave();
-    });
-    unlockWrap.append(chk, S('unlock-label'));
-    rowEl.appendChild(unlockWrap);
+    if (!state.unlocks[unlockKey]) {
+      const unlockWrap = el('label', {className:'unlock-wrap', title: S('unlock-label')});
+      const chk = el('input', {type:'checkbox'});
+      chk.addEventListener('change', () => {
+        if (chk.checked) {
+          state.unlocks[unlockKey] = true;
+          const defCode = CFG['default-work-code'] || 'REG';
+          const wstart = CFG['work-day-start'] || '09:00';
+          const wend   = CFG['work-day-end']   || '17:00';
+          row.code   = defCode;
+          row.timeIn  = wstart;
+          row.timeOut = wend;
+        } else {
+          delete state.unlocks[unlockKey];
+        }
+        const block = $(`#day-${dateStr}`);
+        if (block) redrawDayBlock(block, dateStr);
+        scheduleAutoSave();
+      });
+      unlockWrap.append(chk, S('unlock-label'));
+      rowEl.appendChild(unlockWrap);
+    }
   }
 
   applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
