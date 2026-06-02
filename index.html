@@ -748,20 +748,10 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
     // Weekend/NON can't be user-selected
     const available = codesForType(state.empType);
     if (!row.code) codeEl.appendChild(el('option', {value:''}, ''));
-    // If this row was originally a weekend/non-working day, offer a way to go back
-    if (row._locked) {
-      const revertLabel = row.code === 'WEEKEND' || !isWorkday(dateStr)
-        ? (state.lang === 'vi' ? 'Cuối tuần' : 'Weekend')
-        : null;
-      // Will be added below only if original was weekend
-      if (!isWorkday(dateStr)) {
-        codeEl.appendChild(el('option', {value:'__WEEKEND__'}, revertLabel));
-      } else {
-        // Non-working day locked originally — allow revert to NON
-        const nonObj = codeObj('NON');
-        const nonDisp = nonObj ? (nonObj[`display-${state.lang}`] || nonObj['display-en'] || 'NON') : 'Non-working day';
-        codeEl.appendChild(el('option', {value:'__NON__'}, nonDisp));
-      }
+    // For unlocked weekend rows, offer a way to revert (WEEKEND is not a real config code)
+    if (row._locked && !isWorkday(dateStr)) {
+      const wkLabel = state.lang === 'vi' ? 'Cuối tuần' : 'Weekend';
+      codeEl.appendChild(el('option', {value:'__WEEKEND__'}, wkLabel));
     }
     available.forEach(c => {
       const dispKey = `display-${state.lang}`;
@@ -770,10 +760,10 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
     });
     codeEl.addEventListener('change', () => {
       const newCode = codeEl.value;
-      const revert = newCode === '__WEEKEND__' || newCode === '__NON__';
+      const revert = newCode === '__WEEKEND__';
       const newCObj = codeObj(newCode);
       const becomesLocked = revert || (newCObj && newCObj.lockstate === 'locked');
-      row.code = revert ? (newCode === '__WEEKEND__' ? 'WEEKEND' : 'NON') : newCode;
+      row.code = revert ? 'WEEKEND' : newCode;
       if (becomesLocked) {
         if (revert || !newCObj || !newCObj.counthours) {
           row.timeIn  = '';
