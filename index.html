@@ -593,12 +593,10 @@ function render() {
       el('label', null, S('employee-label')),
       el('div', {style:{display:'flex',gap:'8px',alignItems:'center'}}, [employeeInput, newBtn])
     ]),
+    el('div', {className:'fgrp'}, [el('label', null, S('period-label')), fromInput]),
+    el('div', {className:'fgrp'}, [el('label', null, S('period-to')), toInput]),
     el('div', {className:'fgrp'}, [el('label', null, S('employee-type-label')), empTypeSelect]),
     el('div', {className:'fgrp'}, [el('label', null, S('language-label')), langSelect]),
-  ]));
-  wrap.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp'}, [el('label', null, S('period-label')), fromInput]),
-    el('div', {className:'fgrp', style:{justifyContent:'flex-end'}}, [el('label', null, S('period-to')), toInput]),
   ]));
 
   wrap.appendChild(el('hr', {className:'divider'}));
