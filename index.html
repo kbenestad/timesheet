@@ -103,6 +103,11 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 .ts-row .input-err { border-color: var(--err) !important; }
 .ts-row .input-warn { border-color: var(--warn) !important; }
 
+/* Inline day validation messages */
+.day-val { font-size: 11px; padding: 4px 8px 4px 12px; line-height: 1.6; }
+.day-val .err-line { color: var(--err); }
+.day-val .warn-line { color: var(--warn); }
+
 /* Footer summary */
 .summary-block { margin-top: 20px; padding: 16px 20px; background: #f5f6f8; border-radius: 6px; border: 1px solid var(--border); }
 .summary-row { display: flex; justify-content: flex-end; gap: 12px; font-size: 13px; padding: 2px 0; }
@@ -476,7 +481,20 @@ function runValidation() {
     }
   }
 
-  return { errors, warnings };
+  // Build per-date map for inline display
+  const byDate = {};
+  [...errors, ...warnings].forEach(msg => {
+    // Messages are prefixed with the formatted date; find the matching dateStr
+    for (const ds of sortedDates) {
+      if (msg.startsWith(fmtDate(ds, state.lang) + ':')) {
+        if (!byDate[ds]) byDate[ds] = { errors: [], warnings: [] };
+        if (errors.includes(msg)) byDate[ds].errors.push(msg.slice(fmtDate(ds, state.lang).length + 1).trim());
+        else byDate[ds].warnings.push(msg.slice(fmtDate(ds, state.lang).length + 1).trim());
+        break;
+      }
+    }
+  });
+  return { errors, warnings, byDate };
 }
 
 // ========== ROW COLOUR ==========
@@ -649,6 +667,11 @@ function render() {
       valBox.innerHTML = '';
     }
     updateGenBtn(genBtn);
+    // Refresh inline messages in all day blocks
+    $$('.day-block').forEach(block => {
+      const ds = block.id.replace('day-', '');
+      renderDayValMessages(block, ds);
+    });
   }}, S('btn-validate'));
 
   updateGenBtn(genBtn);
@@ -706,6 +729,34 @@ function redrawDayBlock(block, dateStr) {
     const isLast  = i === totalRows - 1;
     block.appendChild(renderRow(dateStr, i, row, isFirst, isLast, totalRows));
   });
+
+  renderDayValMessages(block, dateStr);
+}
+
+function renderDayValMessages(block, dateStr) {
+  const old = block.querySelector('.day-val');
+  if (old) old.remove();
+  if (!validationResult || !validationResult.byDate[dateStr]) return;
+  const { errors, warnings } = validationResult.byDate[dateStr];
+  if (!errors.length && !warnings.length) return;
+
+  // Match background of the first row in this day
+  const firstRow = block.querySelector('.ts-row');
+  const bg = firstRow ? firstRow.style.background : '';
+
+  const div = el('div', {className: 'day-val'});
+  if (bg) div.style.background = bg;
+  errors.forEach(msg => {
+    const d = el('div', {className: 'err-line'});
+    d.textContent = '⚠ ' + msg;
+    div.appendChild(d);
+  });
+  warnings.forEach(msg => {
+    const d = el('div', {className: 'warn-line'});
+    d.textContent = '⚠ ' + msg;
+    div.appendChild(d);
+  });
+  block.appendChild(div);
 }
 
 function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
