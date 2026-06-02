@@ -53,7 +53,7 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 
 /* Row grid */
 .grid-wrap { margin: 0 -4px; }
-.grid-header { display: grid; grid-template-columns: 68px 90px 90px 90px 1fr 56px 36px; gap: 4px; padding: 0 4px 6px; }
+.grid-header { display: grid; grid-template-columns: 68px 90px 90px 90px minmax(60px,1fr) 56px 48px; gap: 4px; padding: 0 4px 6px; }
 .grid-header span { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .3px; }
 .grid-header .col-hours { text-align: right; }
 
@@ -64,7 +64,7 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 /* Row */
 .ts-row {
   display: grid;
-  grid-template-columns: 68px 90px 90px 90px 1fr 56px 36px;
+  grid-template-columns: 68px 90px 90px 90px minmax(60px,1fr) 56px 48px;
   gap: 4px;
   padding: 5px 4px;
   border-left: 4px solid transparent;
@@ -85,8 +85,8 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 /* Row actions (+/-) */
 .row-actions { opacity: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
 .btn-add-row, .btn-rm-row {
-  width: 16px; height: 16px; border-radius: 50%; border: 1px solid; cursor: pointer;
-  font-size: 11px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; border: 1px solid; cursor: pointer;
+  font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
   font-weight: 700; padding: 0; font-family: inherit; flex-shrink: 0;
 }
 .btn-add-row { background: #fff; color: var(--accent); border-color: var(--accent); }
@@ -126,7 +126,7 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
   .wrap { margin: 8px; padding: 16px; }
   .frow { flex-direction: column; gap: 10px; }
   .form-hdr { flex-direction: column; gap: 8px; }
-  .grid-header, .ts-row { grid-template-columns: 60px 82px 82px 80px 1fr 50px 36px; }
+  .grid-header, .ts-row { grid-template-columns: 60px 82px 82px 80px minmax(60px,1fr) 50px 48px; }
 }
 </style>
 </head>
