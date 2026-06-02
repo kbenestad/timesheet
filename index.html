@@ -1107,15 +1107,17 @@ async function generatePDF() {
   const doc = await PDFDocument.create();
   const pageW = CFG['page-size'] === 'letter' ? 612 : 595.28;
   const pageH = CFG['page-size'] === 'letter' ? 792 : 841.89;
-  const M = { top: 50, bottom: 65, left: 45, right: 45 };
+  const M = { top: 25, bottom: 52, left: 22, right: 22 };
   const W = pageW - M.left - M.right;
 
   const fontBody = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const sz  = CFG['font-size'] || 10;
-  const szSm = sz - 1;
-  const szLg = sz + 4;
-  const lh = sz + 5;
+  const sz   = 8;
+  const szSm = 7;
+  const szLg = 13;
+  const rowH = 13;   // height of a data row (background rect)
+  const lh   = 12;   // line advance for data rows
+  const hdrLh = 11;  // line advance for header area
 
   const accent  = parseHexColor(CFG['accent-colour'] || '#1a3a5c');
   const black   = rgb(0.13, 0.13, 0.13);
@@ -1146,124 +1148,148 @@ async function generatePDF() {
     const ps = `${state.periodFrom}  –  ${state.periodTo}`;
     const pw = fontBody.widthOfTextAtSize(ps, sz);
     pg.drawText(ps, {x:M.left+W-pw, y, size:sz, font:fontBody, color:gray});
-    y -= lh;
+    y -= hdrLh;
     pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
-    y -= lh;
+    y -= hdrLh;
+  }
+
+  // Column layout: DATE | TIME IN | TIME OUT | CODE | DESCRIPTION | HOURS
+  const COL = [0, W*0.14, W*0.24, W*0.34, W*0.47, W*0.90];
+  const BORDER_W = 3;
+
+  function hexToRgb(hex) {
+    const h = (hex||'').replace('#','');
+    if (h.length !== 6) return null;
+    return rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
+  }
+
+  function drawRowBackground(rowY, bgHex, borderHex) {
+    const rectY = rowY - 3;
+    const bg = bgHex ? hexToRgb(bgHex) : null;
+    const bdr = borderHex ? hexToRgb(borderHex) : null;
+    if (bg) pg.drawRectangle({x:M.left, y:rectY, width:W, height:rowH, color:bg, borderWidth:0});
+    if (bdr) pg.drawRectangle({x:M.left, y:rectY, width:BORDER_W, height:rowH, color:bdr, borderWidth:0});
   }
 
   // Page 1
   addPage(false);
 
-  // Logo / org name
-  const mm10 = 10 * 2.83465;
+  // Logo / org name + title on same line
   if (logoImage) {
     const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
-    const scale = Math.min(maxW / logoImage.width, 52 / logoImage.height, 1);
+    const scale = Math.min(maxW / logoImage.width, 40 / logoImage.height, 1);
     const lw = logoImage.width * scale, lhh = logoImage.height * scale;
-    const logoTop = pageH - mm10;
-    pg.drawImage(logoImage, {x:mm10, y:logoTop-lhh, width:lw, height:lhh});
-    y = Math.min(y, logoTop - lhh - 8);
+    pg.drawImage(logoImage, {x:M.left, y:y-lhh+sz, width:lw, height:lhh});
   } else if (CFG.organization) {
     pg.drawText(CFG.organization, {x:M.left, y, size:szLg, font:fontBold, color:accent});
-    y -= szLg + 8;
   }
-
   const titleStr = S('pdf-title');
   const tw = fontBold.widthOfTextAtSize(titleStr, szLg);
   pg.drawText(titleStr, {x:M.left+W-tw, y, size:szLg, font:fontBold, color:accent});
-  y -= szLg + 10;
+  y -= szLg + 6;
+
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= hdrLh;
 
   // Employee / Period / Type row
-  const c1=0, c2=W*0.38, c3=W*0.7;
-  pg.drawText(S('pdf-employee'), {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
-  pg.drawText(S('pdf-period'),   {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
-  pg.drawText(S('pdf-type'),     {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-  y -= lh;
-  pg.drawText(state.employee || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+  const c1=0, c2=W*0.35, c3=W*0.65;
+  pg.drawText(S('pdf-employee').toUpperCase(), {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText(S('pdf-period').toUpperCase(),   {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText(S('pdf-type').toUpperCase(),     {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
+  y -= hdrLh - 2;
+  pg.drawText(state.employee || '–', {x:M.left+c1, y, size:sz, font:fontBold, color:black});
   pg.drawText(`${state.periodFrom}  –  ${state.periodTo}`, {x:M.left+c2, y, size:sz, font:fontBody, color:black});
   const tObj = empTypeObj(state.empType);
   const typeDisp = tObj ? ((typeof tObj.display === 'object') ? (tObj.display[state.lang] || tObj.display['en'] || state.empType) : (tObj.display || state.empType)) : state.empType;
   pg.drawText(typeDisp, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
-  y -= lh + 4;
+  y -= hdrLh + 2;
 
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
-  y -= lh;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+  y -= hdrLh;
 
-  // Table header
-  const COL = [0, W*0.10, W*0.22, W*0.34, W*0.50, W*0.92];
-  // DATE | TIME IN | TIME OUT | CODE | DESCRIPTION | HOURS
+  // Table column headers
   const headers = [S('col-date'), S('col-time-in'), S('col-time-out'), S('col-code'), S('col-description'), S('col-hours')];
   headers.forEach((h, i) => {
-    const x = M.left + COL[i];
     const txt = h.toUpperCase();
     if (i === 5) {
       const hw = fontBold.widthOfTextAtSize(txt, szSm-1);
-      pg.drawText(txt, {x: M.left+W-hw, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText(txt, {x:M.left+W-hw, y, size:szSm-1, font:fontBold, color:gray});
     } else {
-      pg.drawText(txt, {x, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText(txt, {x:M.left+COL[i]+BORDER_W+2, y, size:szSm-1, font:fontBold, color:gray});
     }
   });
   y -= szSm + 3;
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
-  y -= 6;
+  y -= 5;
 
   // Rows
   const sortedDates = Object.keys(state.days).sort();
   for (let di = 0; di < sortedDates.length; di++) {
     const ds = sortedDates[di];
     const rows = state.days[ds];
+    const totalRowsDay = rows.length;
 
-    // Day divider (not before first)
-    if (di > 0) {
-      needSpace(lh * 2);
-      // 5px rule: 2px white + 1px edebe9 + 2px white
-      y -= 2;
-      pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1, color:rgb(0.93,0.92,0.91)});
-      y -= 3;
-    }
+    // Gap between days
+    if (di > 0) y -= 3;
 
     for (let ri = 0; ri < rows.length; ri++) {
       const row = rows[ri];
       const isFirst = ri === 0;
       const isLocked = isRowLocked(ds, ri, row);
-      needSpace(lh + 4);
+      needSpace(rowH + 2);
 
       const rowY = y;
       const textColor = isLocked ? lgray : black;
-      const timeColor = isLocked ? lgray : black;
+
+      // Row background + left border
+      const cObjRow = row.code && row.code !== 'WEEKEND' ? codeObj(row.code) : null;
+      let bgHex = null, borderHex = null;
+      if (row.code === 'WEEKEND' || !row.code) {
+        bgHex = '#ebebeb'; borderHex = '#c0c0c0';
+      } else if (cObjRow) {
+        if (row.code === 'PPT') {
+          const isFullDay = totalRowsDay === 1;
+          bgHex     = isFullDay ? cObjRow['colour-bg-fullday']     : cObjRow['colour-bg-partialday'];
+          borderHex = isFullDay ? cObjRow['colour-border-fullday'] : cObjRow['colour-border-partialday'];
+        } else {
+          bgHex = cObjRow['colour-bg']; borderHex = cObjRow['colour-border'];
+        }
+      }
+      drawRowBackground(rowY, bgHex, borderHex);
+
+      const tx = M.left + BORDER_W + 2;
 
       // Date (only on first row of day)
       if (isFirst) {
-        const dateTxt = fmtDate(ds, state.lang) + ' ' + fmtDow(ds, state.lang);
-        pg.drawText(dateTxt, {x:M.left+COL[0], y:rowY, size:sz, font:isLocked ? fontBody : fontBold, color:textColor});
+        const dateTxt = fmtDate(ds, state.lang);
+        const dowTxt  = fmtDow(ds, state.lang);
+        pg.drawText(dateTxt, {x:tx+COL[0], y:rowY, size:sz, font:isLocked ? fontBody : fontBold, color:textColor});
+        const dw = (isLocked ? fontBody : fontBold).widthOfTextAtSize(dateTxt, sz);
+        pg.drawText(' ' + dowTxt, {x:tx+COL[0]+dw, y:rowY, size:szSm, font:fontBody, color:lgray});
       }
 
-      // Time in
-      if (row.timeIn) pg.drawText(row.timeIn, {x:M.left+COL[1], y:rowY, size:sz, font:fontBody, color:timeColor});
+      // Time in / out
+      if (row.timeIn)  pg.drawText(row.timeIn,  {x:tx+COL[1], y:rowY, size:sz, font:fontBody, color:textColor});
+      if (row.timeOut) pg.drawText(row.timeOut, {x:tx+COL[2], y:rowY, size:sz, font:fontBody, color:textColor});
 
-      // Time out
-      if (row.timeOut) pg.drawText(row.timeOut, {x:M.left+COL[2], y:rowY, size:sz, font:fontBody, color:timeColor});
-
-      // Code display
-      if (row.code && row.code !== 'WEEKEND') {
-        const cObj = codeObj(row.code);
+      // Code
+      if (row.code === 'WEEKEND') {
+        pg.drawText(state.lang === 'vi' ? 'Cuối tuần' : 'Weekend', {x:tx+COL[3], y:rowY, size:sz, font:fontBody, color:lgray});
+      } else if (row.code) {
         const dispKey = `display-${state.lang}`;
-        const codeTxt = cObj ? (cObj[dispKey] || cObj['display-en'] || row.code) : (row.code === 'WEEKEND' ? 'Weekend' : row.code);
-        pg.drawText(codeTxt, {x:M.left+COL[3], y:rowY, size:sz, font:fontBody, color:textColor});
-      } else if (row.code === 'WEEKEND') {
-        const wkTxt = state.lang === 'vi' ? 'Cuối tuần' : 'Weekend';
-        pg.drawText(wkTxt, {x:M.left+COL[3], y:rowY, size:sz, font:fontBody, color:lgray});
+        const codeTxt = cObjRow ? (cObjRow[dispKey] || cObjRow['display-en'] || row.code) : row.code;
+        pg.drawText(codeTxt, {x:tx+COL[3], y:rowY, size:sz, font:fontBody, color:textColor});
       }
 
       // Description
-      const descMaxW = W - COL[4] - (W - COL[5]) - 8;
-      if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:M.left+COL[4], y:rowY, size:szSm, font:fontBody, color:textColor});
+      const descMaxW = COL[5] - COL[4] - 4;
+      if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:tx+COL[4], y:rowY, size:szSm, font:fontBody, color:textColor});
 
-      // Hours (right-aligned)
+      // Hours right-aligned
       const mins = calcRowMins(row);
       if (mins != null && mins > 0) {
         const hStr = fmtHM(mins);
-        const hw = fontBody.widthOfTextAtSize(hStr, sz);
+        const hw = fontBold.widthOfTextAtSize(hStr, sz);
         pg.drawText(hStr, {x:M.left+W-hw, y:rowY, size:sz, font:fontBold, color:textColor});
       }
 
@@ -1282,12 +1308,12 @@ async function generatePDF() {
   const summaryRight = M.left + W;
 
   function drawSummaryRow(label, value, bold) {
-    needSpace(lh);
+    needSpace(hdrLh);
     const vw = fontBold.widthOfTextAtSize(value, sz);
     const lw2 = fontBody.widthOfTextAtSize(label, szSm);
     pg.drawText(label, {x:summaryRight - vw - lw2 - 12, y, size:szSm, font:fontBody, color:gray});
     pg.drawText(value, {x:summaryRight - vw, y, size:sz, font: bold ? fontBold : fontBody, color: bold ? accent : black});
-    y -= lh;
+    y -= hdrLh;
   }
 
   drawSummaryRow(S('total-hours') + ':', fmtHM(grandMins), true);
@@ -1355,13 +1381,13 @@ async function generatePDF() {
     p.drawLine({start:{x:M.left,y:fy+18}, end:{x:M.left+W,y:fy+18}, thickness:0.5, color:lineCol});
     const footerLeft = CFG.footer || 'Timesheet';
     p.drawText(footerLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
-    if (state.employee) p.drawText(state.employee, {x:M.left, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+    if (state.employee) p.drawText(state.employee, {x:M.left, y:fy-hdrLh+2, size:szSm-1, font:fontBody, color:gray});
     const pgStr = `Page ${i+1}/${totalPages}`;
     const pgWw = fontBody.widthOfTextAtSize(pgStr, szSm-1);
     p.drawText(pgStr, {x:M.left+W-pgWw, y:fy, size:szSm-1, font:fontBody, color:gray});
     const prStr = `Printed: ${printed}`;
     const prW = fontBody.widthOfTextAtSize(prStr, szSm-1);
-    p.drawText(prStr, {x:M.left+W-prW, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+    p.drawText(prStr, {x:M.left+W-prW, y:fy-hdrLh+2, size:szSm-1, font:fontBody, color:gray});
   });
 
   const pdfBytes = await doc.save();
