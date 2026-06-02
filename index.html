@@ -495,8 +495,7 @@ function applyRowColour(rowEl, dateStr, row, rowIndex, totalRowsForDay) {
 
   if (borderCol) rowEl.style.borderLeftColor = borderCol;
   if (bgCol && mutedbg) {
-    const opacity = isLocked ? 0.40 : 0.15;
-    rowEl.style.background = hexWithOpacity(bgCol, opacity);
+    rowEl.style.background = bgCol;
   }
 }
 
