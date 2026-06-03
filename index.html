@@ -1225,6 +1225,9 @@ async function generatePDF() {
   const lh    = 14;  // line advance for data rows
   const hdrLh = 12;  // line advance for header area
 
+  const now = new Date();
+  const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
   const accent  = parseHexColor(CFG['accent-colour'] || '#1a3a5c');
   const black   = rgb(0.13, 0.13, 0.13);
   const gray    = rgb(0.45, 0.45, 0.45);
@@ -1499,8 +1502,6 @@ async function generatePDF() {
 
   // Footers
   const totalPages = pages.length;
-  const now = new Date();
-  const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   pages.forEach((p, i) => {
     const fy = M.bottom - 30;
     p.drawLine({start:{x:M.left,y:fy+18}, end:{x:M.left+W,y:fy+18}, thickness:0.5, color:lineCol});
