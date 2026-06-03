@@ -1372,34 +1372,34 @@ async function generatePDF() {
       if (isFirst) {
         const dateTxt = fmtDate(ds, state.lang);
         const dowTxt  = fmtDow(ds, state.lang);
-        pg.drawText(dateTxt, {x:tx+COL[0], y:rowY, size:sz, font:isLocked ? fontBody : fontBold, color:textColor});
+        pg.drawText(dateTxt, {x:tx+COL[0], y:rowY+2, size:sz, font:isLocked ? fontBody : fontBold, color:textColor});
         const dw = (isLocked ? fontBody : fontBold).widthOfTextAtSize(dateTxt, sz);
-        pg.drawText(' ' + dowTxt, {x:tx+COL[0]+dw, y:rowY, size:szSm, font:fontBody, color:lgray});
+        pg.drawText(' ' + dowTxt, {x:tx+COL[0]+dw, y:rowY+2, size:szSm, font:fontBody, color:lgray});
       }
 
       // Time in / out
-      if (row.timeIn)  pg.drawText(row.timeIn,  {x:tx+COL[1], y:rowY, size:sz, font:fontBody, color:textColor});
-      if (row.timeOut) pg.drawText(row.timeOut, {x:tx+COL[2], y:rowY, size:sz, font:fontBody, color:textColor});
+      if (row.timeIn)  pg.drawText(row.timeIn,  {x:tx+COL[1], y:rowY+2, size:sz, font:fontBody, color:textColor});
+      if (row.timeOut) pg.drawText(row.timeOut, {x:tx+COL[2], y:rowY+2, size:sz, font:fontBody, color:textColor});
 
       // Code
       if (row.code === 'WEEKEND') {
-        pg.drawText(state.lang === 'vi' ? 'Cuối tuần' : 'Weekend', {x:tx+COL[3], y:rowY, size:sz, font:fontBody, color:lgray});
+        pg.drawText(state.lang === 'vi' ? 'Cuối tuần' : 'Weekend', {x:tx+COL[3], y:rowY+2, size:sz, font:fontBody, color:lgray});
       } else if (row.code) {
         const dispKey = `display-${state.lang}`;
         const codeTxt = cObjRow ? (cObjRow[dispKey] || cObjRow['display-en'] || row.code) : row.code;
-        pg.drawText(codeTxt, {x:tx+COL[3], y:rowY, size:sz, font:fontBody, color:textColor});
+        pg.drawText(codeTxt, {x:tx+COL[3], y:rowY+2, size:sz, font:fontBody, color:textColor});
       }
 
       // Description
       const descMaxW = COL[5] - COL[4] - 4;
-      if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:tx+COL[4], y:rowY, size:szSm, font:fontBody, color:textColor});
+      if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:tx+COL[4], y:rowY+2, size:szSm, font:fontBody, color:textColor});
 
       // Hours right-aligned
       const mins = calcRowMins(row);
       if (mins != null && mins > 0) {
         const hStr = fmtHM(mins);
         const hw = fontBold.widthOfTextAtSize(hStr, sz);
-        pg.drawText(hStr, {x:M.left+W-hw, y:rowY, size:sz, font:fontBold, color:textColor});
+        pg.drawText(hStr, {x:M.left+W-hw, y:rowY+2, size:sz, font:fontBold, color:textColor});
       }
 
       y -= lh;
