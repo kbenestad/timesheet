@@ -1406,19 +1406,25 @@ async function generatePDF() {
     }
   }
 
-  // Summary block
-  needSpace(lh * 12);
-  y -= 6;
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:2, color:accent});
-  y -= lh + 2;
-
+  // Summary + Signature block — side by side
   const {codeTotals, grandMins} = computeTotals();
   const decHours = (grandMins / 60).toFixed(2);
-  const summaryRight = M.left + W;
+  const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
+  const sigColW = needsSignature() ? W * 0.48 : 0;
+  const sumRows = 2 + shownCodes.length;
+  const blockH = sumRows * hdrLh + (needsSignature() ? 24 : 0);
+  needSpace(blockH + lh);
 
+  y -= 8;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= hdrLh;
+
+  const blockTopY = y;
+
+  // — RIGHT: summary column —
+  const summaryRight = M.left + W;
   function drawSummaryRow(label, value, bold) {
-    needSpace(hdrLh);
-    const vw = fontBold.widthOfTextAtSize(value, sz);
+    const vw = (bold ? fontBold : fontBody).widthOfTextAtSize(value, sz);
     const lw2 = fontBody.widthOfTextAtSize(label, szSm);
     pg.drawText(label, {x:summaryRight - vw - lw2 - 12, y, size:szSm, font:fontBody, color:gray});
     pg.drawText(value, {x:summaryRight - vw, y, size:sz, font: bold ? fontBold : fontBody, color: bold ? accent : black});
@@ -1427,93 +1433,80 @@ async function generatePDF() {
 
   drawSummaryRow(S('total-hours') + ':', fmtHM(grandMins), true);
   drawSummaryRow(S('total-hours-decimal') + ':', decHours, false);
-
-  const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
   shownCodes.forEach(c => {
     const dispKey = `display-${state.lang}`;
     const disp = c[dispKey] || c['display-en'] || c.code;
     drawSummaryRow(`${S('of-which')} ${disp}:`, fmtHM(codeTotals[c.code] || 0), false);
   });
 
-  // UNP note
-  const unpMins = codeTotals['UNP'] || 0;
-  if (unpMins > 0 && grandMins > 0) {
-    needSpace(lh * 3);
-    y -= 4;
-    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
-    y -= lh;
-    const qty = (1 - unpMins / grandMins).toFixed(6);
-    const noteTemplate = S('note-unpaid');
-    const noteText = noteTemplate
-      .replace('{x}', fmtHM(unpMins))
-      .replace('{y}', fmtHM(grandMins))
-      .replace('{q}', qty);
-    noteText.split('\n').forEach(line => {
-      const wrapped = wrapText(line, fontBody, szSm, W);
-      wrapped.forEach(wl => {
-        needSpace(lh);
-        pg.drawText(wl, {x:M.left, y, size:szSm, font:fontBody, color:gray});
-        y -= lh;
-      });
-    });
-  }
+  const summaryBottomY = y;
 
-  // Signature block
+  // UNP note (below both columns, full width)
+  const unpMins = codeTotals['UNP'] || 0;
+
+  // — LEFT: signature column —
   if (needsSignature()) {
-    const sigHalfW = W * 0.45;
-    const sig2X = M.left + W - sigHalfW;
-    const sigImgH = 22;
-    needSpace(hdrLh * 4 + sigImgH);
-    y -= hdrLh;
+    let sy = blockTopY;
+    const sigImgH = 20;
 
     const empLabelTxt = S('signature-employee') + ':';
     const empLabelW = fontBody.widthOfTextAtSize(empLabelTxt, szSm);
-    pg.drawText(empLabelTxt, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+    pg.drawText(empLabelTxt, {x:M.left, y:sy, size:szSm, font:fontBody, color:gray});
 
-    // Signature image inline, right of label
     if (signatureDataUrl) {
       const b64 = signatureDataUrl.split(',')[1];
       const sigBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       const sigImg = await doc.embedPng(sigBytes);
-      const maxSigW = sigHalfW - empLabelW - 8;
+      const maxSigW = sigColW - empLabelW - 8;
       const scale = Math.min(maxSigW / sigImg.width, sigImgH / sigImg.height, 1);
-      pg.drawImage(sigImg, {x:M.left + empLabelW + 6, y:y - sigImgH + sz, width:sigImg.width*scale, height:sigImg.height*scale});
+      pg.drawImage(sigImg, {x:M.left + empLabelW + 6, y:sy - sigImgH + sz, width:sigImg.width*scale, height:sigImg.height*scale});
     } else {
-      pg.drawLine({start:{x:M.left+empLabelW+4, y:y-1}, end:{x:M.left+sigHalfW, y:y-1}, thickness:0.5, color:black});
+      pg.drawLine({start:{x:M.left+empLabelW+4, y:sy-1}, end:{x:M.left+sigColW, y:sy-1}, thickness:0.5, color:black});
     }
+    sy -= hdrLh + sigImgH - sz;
 
-    // Authorised signature — blank line
-    const authLabelTxt = S('signature-authorised') + ':';
-    const authLabelW = fontBody.widthOfTextAtSize(authLabelTxt, szSm);
-    pg.drawText(authLabelTxt, {x:sig2X, y, size:szSm, font:fontBody, color:gray});
-    pg.drawLine({start:{x:sig2X+authLabelW+4, y:y-1}, end:{x:sig2X+sigHalfW, y:y-1}, thickness:0.5, color:black});
-
-    y -= hdrLh + sigImgH - sz;
-
-    // Date row — print date for employee, blank line for authorised
     const dateLabelTxt = S('signature-date') + ':';
     const dateLabelW = fontBody.widthOfTextAtSize(dateLabelTxt, szSm);
-    pg.drawText(dateLabelTxt, {x:M.left, y, size:szSm, font:fontBody, color:gray});
-    pg.drawText(printed, {x:M.left + dateLabelW + 4, y, size:szSm, font:fontBody, color:black});
+    pg.drawText(dateLabelTxt, {x:M.left, y:sy, size:szSm, font:fontBody, color:gray});
+    pg.drawText(printed, {x:M.left + dateLabelW + 4, y:sy, size:szSm, font:fontBody, color:black});
+    sy -= hdrLh + 4;
 
-    pg.drawText(dateLabelTxt, {x:sig2X, y, size:szSm, font:fontBody, color:gray});
-    pg.drawLine({start:{x:sig2X+dateLabelW+4, y:y-1}, end:{x:sig2X+sigHalfW, y:y-1}, thickness:0.5, color:black});
+    const authLabelTxt = S('signature-authorised') + ':';
+    const authLabelW = fontBody.widthOfTextAtSize(authLabelTxt, szSm);
+    pg.drawText(authLabelTxt, {x:M.left, y:sy, size:szSm, font:fontBody, color:gray});
+    pg.drawLine({start:{x:M.left+authLabelW+4, y:sy-1}, end:{x:M.left+sigColW, y:sy-1}, thickness:0.5, color:black});
+    sy -= hdrLh;
+
+    pg.drawText(dateLabelTxt, {x:M.left, y:sy, size:szSm, font:fontBody, color:gray});
+    pg.drawLine({start:{x:M.left+dateLabelW+4, y:sy-1}, end:{x:M.left+sigColW, y:sy-1}, thickness:0.5, color:black});
+
+    y = Math.min(summaryBottomY, sy - hdrLh);
   }
 
-  // Footers
+  if (unpMins > 0 && grandMins > 0) {
+    y -= 4;
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
+    y -= hdrLh;
+    const qty = (1 - unpMins / grandMins).toFixed(6);
+    const noteText = S('note-unpaid').replace('{x}', fmtHM(unpMins)).replace('{y}', fmtHM(grandMins)).replace('{q}', qty);
+    noteText.split('\n').forEach(line => {
+      wrapText(line, fontBody, szSm, W).forEach(wl => {
+        pg.drawText(wl, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+        y -= hdrLh;
+      });
+    });
+  }
+
+  // Footers — single line, flush against divider
   const totalPages = pages.length;
   pages.forEach((p, i) => {
-    const fy = M.bottom - 30;
-    p.drawLine({start:{x:M.left,y:fy+18}, end:{x:M.left+W,y:fy+18}, thickness:0.5, color:lineCol});
-    const footerLeft = CFG.footer || 'Timesheet';
-    p.drawText(footerLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
-    if (state.employee) p.drawText(state.employee, {x:M.left, y:fy-hdrLh+2, size:szSm-1, font:fontBody, color:gray});
-    const pgStr = `Page ${i+1}/${totalPages}`;
-    const pgWw = fontBody.widthOfTextAtSize(pgStr, szSm-1);
-    p.drawText(pgStr, {x:M.left+W-pgWw, y:fy, size:szSm-1, font:fontBody, color:gray});
-    const prStr = `Printed: ${printed}`;
-    const prW = fontBody.widthOfTextAtSize(prStr, szSm-1);
-    p.drawText(prStr, {x:M.left+W-prW, y:fy-hdrLh+2, size:szSm-1, font:fontBody, color:gray});
+    const fy = M.bottom - 4;
+    p.drawLine({start:{x:M.left,y:fy+hdrLh}, end:{x:M.left+W,y:fy+hdrLh}, thickness:0.5, color:lineCol});
+    const leftStr = [CFG.footer, state.employee].filter(Boolean).join('  ·  ');
+    p.drawText(leftStr, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    const rightStr = `Page ${i+1}/${totalPages}  ·  Printed: ${printed}`;
+    const rw = fontBody.widthOfTextAtSize(rightStr, szSm-1);
+    p.drawText(rightStr, {x:M.left+W-rw, y:fy, size:szSm-1, font:fontBody, color:gray});
   });
 
   const pdfBytes = await doc.save();
