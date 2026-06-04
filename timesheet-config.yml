@@ -11,6 +11,15 @@ font-heading: Helvetica
 font-size: 10
 accent-colour: "#1a3a5c"
 footer: "Confidential"
+
+about-title: "About Timesheet"
+about-content: |
+  **Timesheet** is an open-source timesheet and invoice tool built for individuals and small organizations.
+
+  Generate professional PDF timesheets with configurable work codes, employee types, and branding.
+
+  Source code and documentation available at [kbenestad/timesheet](https://github.com/kbenestad/timesheet).
+about-button: "Close"
 muted-background: yes
 needssignature: yes
 default-work-code: REG
