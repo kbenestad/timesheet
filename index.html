@@ -130,8 +130,18 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 .modal-overlay { position: fixed; top:0; right:0; bottom:0; left:0; background: rgba(0,0,0,.45); z-index: 9999; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: #fff; border-radius: 8px; padding: 24px 28px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
 .modal-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.modal-body { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 20px; }
+.modal-body { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 20px; text-align: left; }
+.modal-body p { margin-bottom: 10px; }
+.modal-body strong { font-weight: 700; }
+.modal-body a { color: var(--accent); }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* App footer */
+.app-footer { max-width: 980px; margin: 12px auto 24px; text-align: center; font-size: 12px; color: var(--muted); }
+.app-footer a { color: var(--muted); text-decoration: none; }
+.app-footer a:hover { color: var(--accent); text-decoration: underline; }
+.app-footer button.footer-about { background: none; border: none; padding: 0; font-size: 12px; color: var(--muted); cursor: pointer; font-family: inherit; }
+.app-footer button.footer-about:hover { color: var(--accent); text-decoration: underline; }
 
 @media (max-width: 700px) {
   .wrap { margin: 8px; padding: 16px; }
@@ -143,6 +153,12 @@ input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cu
 </head>
 <body>
 <div id="app"><p class="loading">Loading configuration…</p></div>
+<div class="app-footer">
+  © 2026 Kristian Benestad &nbsp;•&nbsp;
+  <a href="https://docs.benestad.net/invoice" target="_blank" rel="noopener">docs.benestad.net</a> &nbsp;•&nbsp;
+  <a href="https://github.com/kbenestad/invoice" target="_blank" rel="noopener">kbenestad/invoice</a> &nbsp;•&nbsp;
+  <button class="footer-about" id="footer-about-btn">About</button>
+</div>
 
 <script>
 (async function() {
@@ -420,6 +436,35 @@ function showConfirmModal(msgHTML) {
     document.body.appendChild(overlay);
     cancelBtn.focus();
   });
+}
+
+function showAboutModal() {
+  const overlay = el('div', {className:'modal-overlay'});
+  const box = el('div', {className:'modal-box'});
+  const hdr = el('div', {className:'modal-hdr'});
+  hdr.append(el('strong', {style:{fontSize:'16px'}}, CFG['about-title'] || 'About'));
+  const body = el('div', {className:'modal-body'});
+  body.innerHTML = markdownToHTML(CFG['about-content'] || '');
+  const footer = el('div', {className:'modal-footer'});
+  const closeBtn = el('button', {className:'btn btn-gen', style:{marginTop:'0',width:'auto',padding:'8px 24px'}}, CFG['about-button'] || 'Close');
+  closeBtn.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  footer.append(closeBtn);
+  box.append(hdr, body, footer);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  closeBtn.focus();
+}
+
+function markdownToHTML(md) {
+  if (!md) return '';
+  return md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .split(/\n\n+/)
+    .map(p => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
+    .join('');
 }
 
 // ========== VALIDATION ==========
@@ -1574,6 +1619,7 @@ async function init() {
 
     document.addEventListener('input', scheduleAutoSave);
     document.addEventListener('change', scheduleAutoSave);
+    document.getElementById('footer-about-btn').addEventListener('click', showAboutModal);
   } catch(e) {
     $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err);padding:40px">Failed to load: ${e.message}</p></div>`;
     console.error(e);
