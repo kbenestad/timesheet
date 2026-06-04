@@ -2,7 +2,7 @@ on: [push]
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    steps:timesheet
+    steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
