@@ -1538,31 +1538,29 @@ async function generatePDF() {
   const doc = await PDFDocument.create();
   const pageW = CFG['page-size'] === 'letter' ? 612 : 595.28;
   const pageH = CFG['page-size'] === 'letter' ? 792 : 841.89;
-  // Slightly wider margins — more breathing room than before
-  const M = { top: 36, bottom: 48, left: 28, right: 28 };
+  const M = { top: 40, bottom: 48, left: 32, right: 32 };
   const W = pageW - M.left - M.right;
 
-  const fontBody = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontBody   = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold   = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
 
-  // Type scale — aligned to design system hierarchy
-  const szBody  = 9;   // body text
-  const szSm    = 8;   // secondary / descriptions
-  const szEye   = 7;   // eyebrow labels (UPPERCASE, tracked)
-  const szOrg   = 13;  // org name in header
-  const szTitle = 18;  // document title
-  const szGrand = 13;  // grand-total figure
-  const lh      = 13;  // data row line advance
-  const rowPad  = 2;   // text offset above row bottom
+  const szBody  = 9;
+  const szSm    = 8;
+  const szEye   = 7;
+  const szOrg   = 13;
+  const szTitle = 18;
+  const szGrand = 14;
+  const lh      = 14;
+  const rowPad  = 3;
 
-  // Color tokens — matched to kBenestad design system
   const accent   = parseHexColor(CFG['accent-colour'] || '#2f6fed');
-  const ink      = rgb(0.078, 0.094, 0.118);  // --text      #14181e
-  const inkSoft  = rgb(0.227, 0.263, 0.310);  // --text-soft #3a434f
-  const muted    = rgb(0.373, 0.412, 0.459);  // --text-muted #5f6975
-  const subtle   = rgb(0.604, 0.639, 0.686);  // --text-subtle #9aa3af
-  const hairline = rgb(0.890, 0.906, 0.933);  // --border     #e3e7ee
-  const divider  = rgb(0.827, 0.851, 0.886);  // --border-strong #d3d9e2
+  const ink      = rgb(0.078, 0.094, 0.118);
+  const inkSoft  = rgb(0.227, 0.263, 0.310);
+  const muted    = rgb(0.373, 0.412, 0.459);
+  const subtle   = rgb(0.604, 0.639, 0.686);
+  const hairline = rgb(0.890, 0.906, 0.933);
+  const divider  = rgb(0.827, 0.851, 0.886);
   const white    = rgb(1, 1, 1);
 
   const now = new Date();
@@ -1574,13 +1572,12 @@ async function generatePDF() {
   const pages = [];
   let pg, y;
 
-  // ── Helpers ────────────────────────────────────────────────────────────
   function hline(yy, thickness = 0.5, color = hairline) {
     pg.drawLine({start:{x:M.left, y:yy}, end:{x:M.left+W, y:yy}, thickness, color});
   }
 
   function eyebrow(txt, x, yy) {
-    pg.drawText(txt.toUpperCase(), {x, y: yy, size: szEye, font: fontBold, color: muted, characterSpacing: 0.35});
+    pg.drawText(txt.toUpperCase(), {x, y: yy, size: szEye, font: fontBold, color: muted, characterSpacing: 0.4});
   }
 
   function hexToRgb(hex) {
@@ -1589,24 +1586,21 @@ async function generatePDF() {
     return rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
   }
 
-  // Left-border colour stripe + optional muted bg tint — both kept as designed
+  const BORDER_W = 3;
   function drawRowBackground(rowY, bgHex, borderHex) {
-    const rectBottom = rowY - lh + rowPad + 1;
-    const rectH = lh;
+    const rectBottom = rowY - lh + rowPad;
     const bg  = bgHex     ? hexToRgb(bgHex)     : null;
     const bdr = borderHex ? hexToRgb(borderHex) : null;
-    if (bg)  pg.drawRectangle({x: M.left + BORDER_W, y: rectBottom, width: W - BORDER_W, height: rectH, color: bg,  borderWidth: 0});
-    if (bdr) pg.drawRectangle({x: M.left,             y: rectBottom, width: BORDER_W,     height: rectH, color: bdr, borderWidth: 0});
+    if (bg)  pg.drawRectangle({x: M.left + BORDER_W, y: rectBottom, width: W - BORDER_W, height: lh, color: bg,  borderWidth: 0});
+    if (bdr) pg.drawRectangle({x: M.left,             y: rectBottom, width: BORDER_W,     height: lh, color: bdr, borderWidth: 0});
   }
 
-  // Column layout — text starts TX, 6 cols
-  const BORDER_W = 3;
-  const TX = M.left + BORDER_W + 3;
-  const COL = [0, W*0.13, W*0.23, W*0.33, W*0.46, W*0.88];
+  // Columns: Date(14%) | TimeIn(10%) | TimeOut(10%) | Code(16%) | Desc(fill) | Hours(right)
+  const TX = M.left + BORDER_W + 4;
+  const COL = [0, W*0.14, W*0.24, W*0.34, W*0.50, W*0.88];
 
-  // ── Continuation page header ───────────────────────────────────────────
   function drawContHeader() {
-    pg.drawText(CFG.organization || '', {x: M.left, y, size: szBody, font: fontBold, color: ink});
+    pg.drawText(CFG.organization || 'kbenestad.timesheet', {x: M.left, y, size: szBody, font: fontBold, color: ink});
     const rTxt = `${state.periodFrom} – ${state.periodTo}  ·  ${state.employee || ''}`;
     const rw = fontBody.widthOfTextAtSize(rTxt, szSm);
     pg.drawText(rTxt, {x: M.left + W - rw, y, size: szSm, font: fontBody, color: muted});
@@ -1622,30 +1616,25 @@ async function generatePDF() {
     if (cont) drawContHeader();
   }
 
-  function needSpace(h) {
-    if (y - h < M.bottom) addPage(true);
-  }
+  function needSpace(h) { if (y - h < M.bottom) addPage(true); }
 
-  // ── Page 1 header ──────────────────────────────────────────────────────
+  // ── Page 1 header ────────────────────────────────────────────────────────
   addPage(false);
   const hdrTopY = y;
 
-  // Left: logo or org name
   if (logoImage) {
     const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
     const logoH = 36;
     const scale = Math.min(maxW / logoImage.width, logoH / logoImage.height, 1);
     const lw = logoImage.width * scale, lhh = logoImage.height * scale;
     pg.drawImage(logoImage, {x: M.left, y: hdrTopY - lhh + szBody, width: lw, height: lhh});
-  } else if (CFG.organization) {
-    pg.drawText(CFG.organization, {x: M.left, y: hdrTopY, size: szOrg, font: fontBold, color: ink});
+  } else {
+    pg.drawText(CFG.organization || 'kbenestad.timesheet', {x: M.left, y: hdrTopY, size: szOrg, font: fontBold, color: ink});
     const tObj2 = empTypeObj(state.empType);
     const typeLabel = tObj2 ? ((typeof tObj2.display === 'object') ? (tObj2.display[state.lang] || tObj2.display['en']) : tObj2.display) : '';
-    const subTxt = typeLabel ? `Timesheet  ·  ${typeLabel}` : 'Timesheet';
-    pg.drawText(subTxt, {x: M.left, y: hdrTopY - szOrg - 4, size: szSm, font: fontBody, color: muted});
+    pg.drawText(typeLabel || 'Timesheet', {x: M.left, y: hdrTopY - szOrg - 4, size: szSm, font: fontBody, color: muted});
   }
 
-  // Right: document title (large, accent) + period below
   const titleStr = S('pdf-title');
   const tw = fontBold.widthOfTextAtSize(titleStr, szTitle);
   pg.drawText(titleStr, {x: M.left + W - tw, y: hdrTopY, size: szTitle, font: fontBold, color: accent});
@@ -1653,28 +1642,25 @@ async function generatePDF() {
   const prw = fontBody.widthOfTextAtSize(periodStr, szSm);
   pg.drawText(periodStr, {x: M.left + W - prw, y: hdrTopY - szTitle - 4, size: szSm, font: fontBody, color: muted});
 
-  y = hdrTopY - 36 - 10;
+  y = hdrTopY - 38;
   hline(y, 1.5, accent);
   y -= 13;
 
-  // Employee / period / type — eyebrow labels + values
   const c1 = 0, c2 = W * 0.35, c3 = W * 0.65;
   eyebrow(S('pdf-employee'), M.left + c1, y);
   eyebrow(S('pdf-period'),   M.left + c2, y);
   eyebrow(S('pdf-type'),     M.left + c3, y);
   y -= szEye + 5;
-  pg.drawText(state.employee || '—', {x: M.left + c1, y, size: szBody, font: fontBold,  color: ink});
+  pg.drawText(state.employee || '—', {x: M.left + c1, y, size: szBody, font: fontBold, color: ink});
   pg.drawText(`${state.periodFrom}  –  ${state.periodTo}`, {x: M.left + c2, y, size: szBody, font: fontBody, color: inkSoft});
   const tObj = empTypeObj(state.empType);
   const typeDisp2 = tObj ? ((typeof tObj.display === 'object') ? (tObj.display[state.lang] || tObj.display['en'] || state.empType) : (tObj.display || state.empType)) : state.empType;
   pg.drawText(typeDisp2, {x: M.left + c3, y, size: szBody, font: fontBody, color: inkSoft});
   y -= szBody + 10;
 
-  // Section separator before table
   hline(y, 0.75, divider);
   y -= 9;
 
-  // Column header eyebrows
   const colHeaders = [S('col-date'), S('col-time-in'), S('col-time-out'), S('col-code'), S('col-description'), S('col-hours')];
   colHeaders.forEach((h, i) => {
     if (i === 5) {
@@ -1686,9 +1672,9 @@ async function generatePDF() {
   });
   y -= szEye + 4;
   hline(y, 1, divider);
-  y -= 6;
+  y -= 7;
 
-  // ── Data rows ──────────────────────────────────────────────────────────
+  // ── Data rows ─────────────────────────────────────────────────────────────
   const sortedDates = Object.keys(state.days).sort();
 
   for (let di = 0; di < sortedDates.length; di++) {
@@ -1696,22 +1682,19 @@ async function generatePDF() {
     const rows = state.days[ds];
     const totalRowsDay = rows.length;
 
-    if (di > 0) y -= 2;
-
     for (let ri = 0; ri < rows.length; ri++) {
       const row = rows[ri];
       const isFirst = ri === 0;
       const isLocked = isRowLocked(ds, ri, row);
-      needSpace(lh + 3);
+      needSpace(lh + 2);
 
       const rowY = y;
       const textColor = isLocked ? subtle : inkSoft;
 
-      // Resolve row colours from config
       const cObjRow = row.code && row.code !== 'WEEKEND' ? codeObj(row.code) : null;
       let bgHex = null, borderHex = null;
       if (row.code === 'WEEKEND' || !row.code) {
-        bgHex = '#ebebeb'; borderHex = '#c0c0c0';
+        bgHex = '#ebebeb'; borderHex = '#c8c8c8';
       } else if (cObjRow) {
         if (row.code === 'PPT') {
           const isFullDay = totalRowsDay === 1;
@@ -1723,13 +1706,13 @@ async function generatePDF() {
       }
       drawRowBackground(rowY, bgHex, borderHex);
 
-      // Date (first row of day only) — bold date, subtle DOW
       if (isFirst) {
         const dateTxt = fmtDate(ds, state.lang);
         const dowTxt  = fmtDow(ds, state.lang);
-        pg.drawText(dateTxt, {x: TX + COL[0], y: rowY, size: szBody, font: isLocked ? fontBody : fontBold, color: isLocked ? subtle : ink});
-        const dw = (isLocked ? fontBody : fontBold).widthOfTextAtSize(dateTxt, szBody);
-        pg.drawText('  ' + dowTxt, {x: TX + COL[0] + dw, y: rowY, size: szSm, font: fontBody, color: subtle});
+        const dateFont = isLocked ? fontBody : fontBold;
+        pg.drawText(dateTxt, {x: TX + COL[0], y: rowY, size: szBody, font: dateFont, color: isLocked ? subtle : ink});
+        const dw = dateFont.widthOfTextAtSize(dateTxt, szBody);
+        pg.drawText(' ' + dowTxt, {x: TX + COL[0] + dw, y: rowY, size: szSm, font: fontBody, color: subtle});
       }
 
       if (row.timeIn)  pg.drawText(row.timeIn,  {x: TX + COL[1], y: rowY, size: szBody, font: fontBody, color: textColor});
@@ -1743,13 +1726,11 @@ async function generatePDF() {
         pg.drawText(codeTxt, {x: TX + COL[3], y: rowY, size: szBody, font: fontBody, color: textColor});
       }
 
-      // Description — smaller, muted
-      const descMaxW = COL[5] - COL[4] - 4;
+      const descMaxW = COL[5] - COL[4] - 6;
       if (row.desc) {
         pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x: TX + COL[4], y: rowY, size: szSm, font: fontBody, color: isLocked ? subtle : muted});
       }
 
-      // Hours — right-aligned, bold for active rows
       const mins = calcRowMins(row);
       if (mins != null && mins > 0) {
         const hStr = fmtHM(mins);
@@ -1761,16 +1742,17 @@ async function generatePDF() {
     }
   }
 
-  // ── Summary + signatures ───────────────────────────────────────────────
+  // ── Summary + signatures ──────────────────────────────────────────────────
   const {codeTotals, grandMins} = computeTotals();
   const decHours = (grandMins / 60).toFixed(2);
   const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
 
-  // Estimate space needed
-  const sigBoxH = 40;
-  const sigBlockH = needsSignature() ? szEye + 6 + sigBoxH + lh + 6 : 0;
-  const sumBlockH = (shownCodes.length + 2) * lh + szGrand + 12;
-  needSpace(14 + Math.max(sigBlockH, sumBlockH) + 16);
+  const sigBoxH = 44;
+  const hasSig = needsSignature();
+  // When sig required: employee box left + authorised box right, each half-width
+  const sigBlockH = hasSig ? szEye + 6 + sigBoxH + lh + 6 : 0;
+  const sumBlockH = (shownCodes.length + 1) * lh + szGrand + lh + 20;
+  needSpace(16 + Math.max(sigBlockH, sumBlockH) + 16);
 
   y -= 10;
   hline(y, 1.5, accent);
@@ -1778,12 +1760,11 @@ async function generatePDF() {
 
   const blockTopY = y;
 
-  // ── RIGHT: totals panel ────────────────────────────────────────────────
-  const sumColX   = M.left + W * 0.58;
-  const sumRight  = M.left + W;
+  // ── RIGHT: totals ──────────────────────────────────────────────────────────
+  const sumColX  = M.left + W * 0.56;
+  const sumRight = M.left + W;
   let sy = blockTopY;
 
-  // Code breakdowns
   shownCodes.forEach(c => {
     const dispKey = `display-${state.lang}`;
     const disp = c[dispKey] || c['display-en'] || c.code;
@@ -1794,49 +1775,47 @@ async function generatePDF() {
     sy -= lh;
   });
 
-  // Decimal hours
-  const decValW = fontBody.widthOfTextAtSize(decHours, szSm);
-  pg.drawText(S('total-hours-decimal'), {x: sumColX, y: sy, size: szSm, font: fontBody, color: muted});
-  pg.drawText(decHours, {x: sumRight - decValW, y: sy, size: szSm, font: fontBody, color: inkSoft});
-  sy -= lh + 3;
-
-  // Divider above grand total
+  // Divider + TOTAL HOURS grand figure
   pg.drawLine({start:{x: sumColX, y: sy}, end:{x: sumRight, y: sy}, thickness: 0.75, color: divider});
-  sy -= 6;
+  sy -= 7;
 
-  // Grand total — eyebrow label + large accent value
   eyebrow(S('total-hours'), sumColX, sy);
   const grandTxt = fmtHM(grandMins);
   const gw = fontBold.widthOfTextAtSize(grandTxt, szGrand);
   pg.drawText(grandTxt, {x: sumRight - gw, y: sy - (szGrand - szEye), size: szGrand, font: fontBold, color: accent});
   sy -= szGrand + 6;
 
+  // Decimal hours — italic, muted, below grand total
+  const decValW = fontItalic.widthOfTextAtSize(decHours, szSm);
+  pg.drawText(S('total-hours-decimal'), {x: sumColX, y: sy, size: szSm, font: fontItalic, color: subtle});
+  pg.drawText(decHours, {x: sumRight - decValW, y: sy, size: szSm, font: fontItalic, color: subtle});
+  sy -= lh;
+
   const summaryBottomY = sy;
 
-  // ── LEFT: signature blocks ─────────────────────────────────────────────
-  if (needsSignature()) {
-    const sigColW = W * 0.52;
-    const sigBoxW = (sigColW - 12) / 2;
+  // ── LEFT: signatures (employee + authorised, side by side) ────────────────
+  if (hasSig) {
+    const sigColW = W * 0.50;
+    const sigBoxW = (sigColW - 10) / 2;
     let sigY = blockTopY;
 
     // Employee signature
     eyebrow(S('signature-employee'), M.left, sigY);
     sigY -= szEye + 5;
-    // Draw bordered box (hairline --border-strong)
     pg.drawRectangle({x: M.left, y: sigY - sigBoxH, width: sigBoxW, height: sigBoxH, borderWidth: 0.75, borderColor: divider, color: white});
     if (signatureDataUrl) {
       const b64 = signatureDataUrl.split(',')[1];
       const sigBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       const sigImg = await doc.embedPng(sigBytes);
-      const scale = Math.min((sigBoxW - 6) / sigImg.width, (sigBoxH - 6) / sigImg.height, 1);
+      const scale = Math.min((sigBoxW - 8) / sigImg.width, (sigBoxH - 8) / sigImg.height, 1);
       const sw = sigImg.width * scale, sh = sigImg.height * scale;
       pg.drawImage(sigImg, {x: M.left + (sigBoxW - sw) / 2, y: sigY - sigBoxH + (sigBoxH - sh) / 2, width: sw, height: sh});
     }
-    sigY -= sigBoxH + 5;
-    pg.drawText(`${S('signature-date')}: ${printed}`, {x: M.left, y: sigY, size: szSm, font: fontBody, color: muted});
+    const empSigBottomY = sigY - sigBoxH - 5;
+    pg.drawText(`${S('signature-date')}: ${printed}`, {x: M.left, y: empSigBottomY, size: szSm, font: fontBody, color: muted});
 
     // Authorised signature
-    const authX = M.left + sigBoxW + 12;
+    const authX = M.left + sigBoxW + 10;
     let authY = blockTopY;
     eyebrow(S('signature-authorised'), authX, authY);
     authY -= szEye + 5;
@@ -1852,7 +1831,7 @@ async function generatePDF() {
     y = summaryBottomY - 6;
   }
 
-  // ── Unpaid leave note ──────────────────────────────────────────────────
+  // ── Unpaid leave note ─────────────────────────────────────────────────────
   const unpMins = codeTotals['UNP'] || 0;
   if (unpMins > 0 && grandMins > 0) {
     y -= 6;
@@ -1868,7 +1847,7 @@ async function generatePDF() {
     });
   }
 
-  // ── Footer (every page) ────────────────────────────────────────────────
+  // ── Footer (every page) ───────────────────────────────────────────────────
   const totalPages = pages.length;
   pages.forEach((p, i) => {
     const fy = M.bottom - 10;
