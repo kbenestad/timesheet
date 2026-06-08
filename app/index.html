@@ -336,6 +336,10 @@ body {
 /* ── Action row ─────────────────────────────────────────────────────────── */
 .kb-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
 .kb-actions .spacer { flex: 1; }
+/* Bottom action bar: Save 20% | Validate 20% | Download 60% */
+.kb-actbar { display: flex; gap: 10px; margin-top: 8px; }
+.kb-actbar .kb-btn { flex: 2; }
+.kb-actbar .kb-btn--primary { flex: 6; }
 
 /* ── Modal ──────────────────────────────────────────────────────────────── */
 .kb-overlay {
@@ -1096,16 +1100,19 @@ function render() {
     return f;
   }
 
-  const newBtnInline = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{alignSelf:'flex-end'}, onClick: onNewTimesheet}, S('btn-new'));
-
   empGrid.append(
     mkField(S('employee-label'), employeeInput),
     mkField(S('employee-type-label'), empTypeSelect),
     mkField(S('period-label'), fromInput),
     mkField(S('period-to'), toInput),
-    newBtnInline,
   );
   empCard.appendChild(empGrid);
+
+  const newBtnRow = el('div', {style:{marginTop:'10px'}});
+  const newBtnEl = el('button', {type:'button', className:'kb-btn kb-btn--soft', onClick: onNewTimesheet}, S('btn-new'));
+  newBtnRow.appendChild(newBtnEl);
+  empCard.appendChild(newBtnRow);
+
   wrap.appendChild(empCard);
 
   // ── Daily entries card
@@ -1152,7 +1159,7 @@ function render() {
 
   // ── Action row
   const genBtn = el('button', {id:'gen-btn', className:'kb-btn kb-btn--primary kb-btn--lg', onClick: onGenerate});
-  genBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>${S('btn-generate')}`;
+  genBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>${state.lang === 'vi' ? 'Tải xuống bảng chấm công' : 'Download Timesheet'}`;
 
   const valBtn = el('button', {className:'kb-btn kb-btn--soft', onClick: () => {
     validationResult = runValidation();
@@ -1165,11 +1172,15 @@ function render() {
     });
   }}, S('btn-validate'));
 
-  const newBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', onClick: onNewTimesheet}, S('btn-new'));
+  const saveBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', onClick: () => {
+    saveState();
+    saveBtn.textContent = state.lang === 'vi' ? 'Đã lưu ✓' : 'Saved ✓';
+    setTimeout(() => { saveBtn.textContent = state.lang === 'vi' ? 'Lưu' : 'Save'; }, 1500);
+  }}, state.lang === 'vi' ? 'Lưu' : 'Save');
 
   updateGenBtn(genBtn);
-  const actRow = el('div', {className:'kb-actions'});
-  actRow.append(newBtn, el('div', {className:'spacer'}), valBtn, genBtn);
+  const actRow = el('div', {className:'kb-actbar'});
+  actRow.append(saveBtn, valBtn, genBtn);
   wrap.appendChild(actRow);
 
   app.appendChild(wrap);
