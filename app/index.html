@@ -857,7 +857,7 @@ function renderSignatureArea(wrap) {
   const title = el('h2', {className: 'kb-card__title'}, S('signature-employee'));
   card.appendChild(title);
 
-  const grid = el('div', {className: 'kb-grid cols-2', style: {gap: '18px'}});
+  const grid = el('div', {className: 'kb-grid cols-1', style: {gap: '18px', maxWidth: '50%'}});
 
   function makeSigField(labelKey) {
     const field = el('div', {className: 'kb-field'});
@@ -942,7 +942,7 @@ function renderSignatureArea(wrap) {
     return field;
   }
 
-  grid.append(makeSigField('signature-employee'), makeSigField('signature-authorised'));
+  grid.append(makeSigField('signature-employee'));
   card.appendChild(grid);
   wrap.appendChild(card);
 }
@@ -1098,11 +1098,14 @@ function render() {
     return f;
   }
 
+  const newBtnInline = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{alignSelf:'flex-end'}, onClick: onNewTimesheet}, S('btn-new'));
+
   empGrid.append(
     mkField(S('employee-label'), employeeInput),
     mkField(S('employee-type-label'), empTypeSelect),
     mkField(S('period-label'), fromInput),
     mkField(S('period-to'), toInput),
+    newBtnInline,
   );
   empCard.appendChild(empGrid);
   wrap.appendChild(empCard);
