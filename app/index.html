@@ -174,8 +174,22 @@ body { padding-top: 36px; }
 .kb-brand .org { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
 .kb-brand .org small { display: block; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
 .kb-doctitle { text-align: right; }
-.kb-doctitle h1 { margin: 0; font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.kb-doctitle h1 { margin: 0; font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.01em; color: var(--text); display: inline-flex; align-items: center; gap: 9px; }
+.kb-doctitle h1 svg { flex-shrink: 0; }
 .kb-doctitle .meta { margin-top: 4px; font-size: var(--fs-small); color: var(--text-muted); font-family: var(--font-mono); }
+/* language dropdown in toolbar */
+.kb-toolbar select {
+  font: 600 var(--fs-small)/1 var(--font-sans);
+  color: var(--text-muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 5px 28px 5px 10px; outline: none; cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.8'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat: no-repeat; background-position: right 8px center;
+  transition: border-color .14s, color .14s;
+}
+.kb-toolbar select:focus { border-color: var(--accent); box-shadow: var(--ring); color: var(--text); }
+.kb-toolbar select:hover { border-color: var(--accent-border); color: var(--text); }
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
 .kb-card {
@@ -995,16 +1009,15 @@ function render() {
   // ── Toolbar
   const toolbar = el('div', {className:'kb-toolbar'});
 
-  const langSeg = el('div', {className:'kb-seg', role:'group'});
-  (CFG.languages || [{code:'en', display:'EN'}]).forEach(l => {
-    const btn = el('button', {type:'button', className: state.lang === l.code ? 'is-active' : ''}, l.display);
-    btn.addEventListener('click', () => {
-      state.lang = l.code;
-      localStorage.setItem('timesheet-lang', l.code);
-      scheduleAutoSave();
-      render();
-    });
-    langSeg.appendChild(btn);
+  const langSeg = el('select', {'aria-label': 'Language'});
+  (CFG.languages || [{code:'en', display:'English'}]).forEach(l => {
+    langSeg.appendChild(el('option', {value: l.code, ...(state.lang === l.code ? {selected:''} : {})}, l.display));
+  });
+  langSeg.addEventListener('change', () => {
+    state.lang = langSeg.value;
+    localStorage.setItem('timesheet-lang', langSeg.value);
+    scheduleAutoSave();
+    render();
   });
 
   const sizeSeg = el('div', {className:'kb-seg', role:'group'});
@@ -1067,7 +1080,8 @@ function render() {
   brand.append(logoTile, orgEl);
 
   const docTitle = el('div', {className:'kb-doctitle'});
-  const h1 = el('h1', null, state.lang === 'vi' ? 'Bảng chấm công' : 'Timesheet');
+  const h1 = el('h1');
+  h1.innerHTML = `<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="48" height="48" rx="12" fill="var(--accent)"/><circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="3.2"/><path d="M24 16 V24 L30 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>${state.lang === 'vi' ? 'timesheet' : 'timesheet'}`;
   const metaDiv = el('div', {className:'meta'});
   metaDiv.textContent = (state.periodFrom && state.periodTo)
     ? `${fmtDate(state.periodFrom, state.lang)} – ${fmtDate(state.periodTo, state.lang)}`
