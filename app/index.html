@@ -258,8 +258,8 @@ function dateRange(from, to) {
 // ========== CONFIG ==========
 let CFG;
 async function loadConfig() {
-  const res = await fetch('timesheet-config.yml');
-  if (!res.ok) throw new Error('Cannot load timesheet-config.yml');
+  const res = await fetch('config.yml');
+  if (!res.ok) throw new Error('Cannot load config.yml');
   CFG = jsyaml.load(await res.text());
   document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#1a3a5c');
 }
