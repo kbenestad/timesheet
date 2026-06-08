@@ -108,8 +108,30 @@ body {
 }
 .kb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+/* ── App bar ─────────────────────────────────────────────────────────────── */
+.kb-appbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 36px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 20px;
+}
+.kb-appbar__inner {
+  max-width: 980px; width: 100%; margin: 0 auto;
+  display: flex; align-items: center; gap: 8px;
+}
+.kb-appbar__logo {
+  width: 18px; height: 18px; flex-shrink: 0; opacity: 0.82;
+}
+.kb-appbar__name {
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted);
+  letter-spacing: -0.01em; opacity: 0.9;
+}
+
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 .kb-wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 56px; }
+body { padding-top: 36px; }
 
 /* ── Toolbar ────────────────────────────────────────────────────────────── */
 .kb-toolbar {
@@ -380,11 +402,23 @@ body {
   .ts-row2.continuation .ts-date { display: none; }
 }
 @media print {
+  .kb-appbar { display: none !important; }
+  body { padding-top: 0 !important; }
   .kb-toolbar, .kb-actions, .sig-controls, .kb-footer { display: none !important; }
 }
 </style>
 </head>
 <body>
+<header class="kb-appbar" aria-hidden="true">
+  <div class="kb-appbar__inner">
+    <svg class="kb-appbar__logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="var(--accent)"/>
+      <circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="3.2"/>
+      <path d="M24 16 V24 L30 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="kb-appbar__name">Timesheet</span>
+  </div>
+</header>
 <div id="app"><p class="kb-loading">Loading configuration…</p></div>
 
 <footer class="kb-footer">
