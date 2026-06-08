@@ -1106,7 +1106,6 @@ function render() {
     mkField(S('period-label'), fromInput),
     mkField(S('period-to'), toInput),
   );
-  empCard.appendChild(el('h2', {className:'kb-card__title'}, state.lang === 'vi' ? 'Người khai' : 'Claimant'));
   empCard.appendChild(empGrid);
 
   const newBtnRow = el('div', {style:{marginTop:'10px'}});
