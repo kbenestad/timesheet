@@ -7,158 +7,401 @@
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 <style>
-:root { --accent: #1a3a5c; --bg: #f5f6f8; --card: #fff; --text: #222; --muted: #666; --border: #d0d4da; --err: #c62828; --warn: #e65100; }
+/* ── Fonts ──────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 400 800;
+  font-display: swap;
+  src: local("Schibsted Grotesk"),
+       url("https://fonts.bunny.net/schibsted-grotesk/files/schibsted-grotesk-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 600;
+  font-display: swap;
+  src: local("JetBrains Mono"),
+       url("https://fonts.bunny.net/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
+/* ── Design tokens (light) ──────────────────────────────────────────────── */
+:root {
+  --font-sans: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-scale: 1;
+  --fs-base:  calc(15px * var(--font-scale));
+  --fs-input: calc(15px * var(--font-scale));
+  --fs-label: calc(12px * var(--font-scale));
+  --fs-title: calc(13px * var(--font-scale));
+  --fs-small: calc(12.5px * var(--font-scale));
+  --fs-h1:    calc(22px * var(--font-scale));
+
+  --accent:        #2f6fed;
+  --accent-hover:  #1f57cf;
+  --accent-soft:   #eef3fe;
+  --accent-border: #c7d9fb;
+  --on-accent:     #ffffff;
+
+  --bg:           #f4f6f9;
+  --surface:      #ffffff;
+  --surface-2:    #f8f9fb;
+  --surface-3:    #f1f3f6;
+  --border:       #e3e7ee;
+  --border-strong:#d3d9e2;
+  --text:         #14181e;
+  --text-soft:    #3a434f;
+  --text-muted:   #5f6975;
+  --placeholder:  #9aa3af;
+
+  --danger:  #d64545; --danger-soft:  #fbeaea; --danger-border:  #f0c9c9;
+  --warning: #c9851f; --warning-soft: #fbf1dd; --warning-border: #eed9ad;
+  --success: #1f9d5f; --success-soft: #e2f3ea; --success-border: #bfe3cf;
+  --info:    #2f6fed; --info-soft:    #eef3fe; --info-border:    #c7d9fb;
+
+  --radius:    8px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(20,24,30,.05);
+  --shadow:    0 6px 22px rgba(20,24,30,.08);
+  --ring:      0 0 0 3px rgba(47,111,237,.20);
+  color-scheme: light;
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent:#5685e9; --accent-hover:#6c98ef; --accent-soft:#16233f; --accent-border:#21386a; --on-accent:#ffffff;
+    --bg:#0d1117; --surface:#161b22; --surface-2:#1c232c; --surface-3:#1c232c;
+    --border:#232a33; --border-strong:#2d3641;
+    --text:#eef1f5; --text-soft:#c2cad3; --text-muted:#8b95a1; --placeholder:#6f7986;
+    --danger:#e06464; --danger-soft:#341819; --danger-border:#5a2a2a;
+    --warning:#d99a3a; --warning-soft:#33270f; --warning-border:#574017;
+    --success:#3bb97a; --success-soft:#13301f; --success-border:#1f4d33;
+    --info:#88abf2; --info-soft:#16233f; --info-border:#21386a;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow:0 8px 28px rgba(0,0,0,.5);
+    --ring:0 0 0 3px rgba(86,133,233,.32);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --accent:#5685e9; --accent-hover:#6c98ef; --accent-soft:#16233f; --accent-border:#21386a; --on-accent:#ffffff;
+  --bg:#0d1117; --surface:#161b22; --surface-2:#1c232c; --surface-3:#1c232c;
+  --border:#232a33; --border-strong:#2d3641;
+  --text:#eef1f5; --text-soft:#c2cad3; --text-muted:#8b95a1; --placeholder:#6f7986;
+  --danger:#e06464; --danger-soft:#341819; --danger-border:#5a2a2a;
+  --warning:#d99a3a; --warning-soft:#33270f; --warning-border:#574017;
+  --success:#3bb97a; --success-soft:#13301f; --success-border:#1f4d33;
+  --info:#88abf2; --info-soft:#16233f; --info-border:#21386a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow:0 8px 28px rgba(0,0,0,.5);
+  --ring:0 0 0 3px rgba(86,133,233,.32);
+  color-scheme: dark;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-.wrap { max-width: 980px; margin: 24px auto; background: var(--card); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 32px; }
-.loading { text-align: center; padding: 80px; color: var(--muted); }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.006em;
+}
+.kb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* Header */
-.form-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.form-hdr .logo img { max-height: 56px; }
-.form-hdr .logo .org-name { font-size: 18px; font-weight: 700; color: var(--accent); }
-.form-hdr .title { font-size: 18px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; text-align: right; }
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+.kb-wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 56px; }
 
-/* Field rows */
-.frow { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-.fgrp { display: flex; flex-direction: column; min-width: 100px; }
-.fgrp.grow { flex: 1; }
-.fgrp label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; letter-spacing: .3px; }
-input, select, textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; background: #fff; }
-input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
-input[disabled], select[disabled] { background: #f0f1f3; color: var(--muted); cursor: not-allowed; }
+/* ── Toolbar ────────────────────────────────────────────────────────────── */
+.kb-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.kb-toolbar .spacer { flex: 1; }
+.kb-seg {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 3px;
+}
+.kb-seg button {
+  font: 600 var(--fs-small)/1 var(--font-sans);
+  color: var(--text-muted); background: transparent; border: 0;
+  white-space: nowrap; padding: 5px 10px; border-radius: 4px; cursor: pointer;
+}
+.kb-seg button.is-active { background: var(--accent-soft); color: var(--accent); }
+.kb-seg button:hover:not(.is-active) { color: var(--text); }
+.kb-iconbtn {
+  display: inline-grid; place-items: center; width: 34px; height: 34px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;
+}
+.kb-iconbtn:hover { color: var(--accent); border-color: var(--accent-border); }
 
-/* Divider */
-.divider { border: none; border-top: 2px solid var(--accent); margin: 20px 0; }
+/* ── Document header ────────────────────────────────────────────────────── */
+.kb-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 24px; padding-bottom: 20px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.kb-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.kb-brand .logo {
+  height: 46px; width: 46px; flex: 0 0 46px; border-radius: 10px;
+  display: grid; place-items: center; background: var(--accent-soft);
+  color: var(--accent); font-weight: 800; font-size: 17px; overflow: hidden;
+}
+.kb-brand .logo img { width: 100%; height: 100%; object-fit: contain; }
+.kb-brand .org { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.kb-brand .org small { display: block; font-size: var(--fs-small); font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+.kb-doctitle { text-align: right; }
+.kb-doctitle h1 { margin: 0; font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.kb-doctitle .meta { margin-top: 4px; font-size: var(--fs-small); color: var(--text-muted); font-family: var(--font-mono); }
 
-/* Buttons */
-.btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
-.btn-secondary { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
-.btn-secondary:hover { background: rgba(26,58,92,.04); }
-.btn-gen { background: var(--accent); color: #fff; font-size: 15px; padding: 12px 32px; border-radius: 6px; }
-.btn-gen:hover:not(:disabled) { opacity: .9; }
-.btn-gen:disabled { opacity: .45; cursor: not-allowed; }
-.btn-validate { background: #fff; color: var(--accent); border: 2px solid var(--accent); font-size: 15px; padding: 10px 24px; border-radius: 6px; }
-.btn-validate:hover { background: rgba(26,58,92,.04); }
-.btn-new { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 13px; padding: 7px 14px; border-radius: 4px; }
-.btn-new:hover { border-color: var(--accent); color: var(--accent); }
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.kb-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+  margin-bottom: 14px;
+}
+.kb-card__title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.005em;
+  color: var(--text-soft); margin: 0 0 16px;
+}
+.kb-card__title::before {
+  content: ""; width: 3px; height: 14px; border-radius: 2px; background: var(--accent);
+}
 
-/* Validation summary */
-.val-summary { border-radius: 6px; padding: 14px 18px; margin-bottom: 16px; font-size: 13px; line-height: 1.8; }
-.val-summary.has-errors { background: #fce4e4; border: 1px solid var(--err); color: var(--err); }
-.val-summary.has-warnings { background: #fff3e0; border: 1px solid var(--warn); color: var(--warn); }
-.val-summary.has-both { background: #fce4e4; border: 1px solid var(--err); }
-.val-summary .err-line { color: var(--err); }
-.val-summary .warn-line { color: var(--warn); }
+/* ── Grid / fields ──────────────────────────────────────────────────────── */
+.kb-grid { display: grid; gap: 12px 16px; }
+.kb-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.kb-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.kb-grid.cols-5 { grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr; }
+.kb-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.kb-label {
+  font-size: var(--fs-label); font-weight: 600; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.kb-input, .kb-select, .kb-textarea {
+  width: 100%; font: 400 var(--fs-input)/1.4 var(--font-sans);
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 8px 11px; outline: none; transition: border-color .14s, box-shadow .14s;
+}
+.kb-input::placeholder, .kb-textarea::placeholder { color: var(--placeholder); }
+.kb-input:focus, .kb-select:focus, .kb-textarea:focus {
+  border-color: var(--accent); box-shadow: var(--ring);
+}
+.kb-input:disabled, .kb-select:disabled, .kb-input[readonly] {
+  background: var(--surface-3); color: var(--text-muted); cursor: not-allowed;
+}
+.kb-input.num { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.kb-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.6'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px;
+}
+.kb-input.is-error, .kb-select.is-error { border-color: var(--danger); }
+.kb-input.is-warn { border-color: var(--warning); background: var(--warning-soft); }
 
-/* Row grid */
-.grid-wrap { margin: 0 -4px; }
-.grid-header { display: grid; grid-template-columns: 68px 90px 90px 90px minmax(60px,1fr) 56px 48px; gap: 4px; padding: 0 4px 6px; }
-.grid-header span { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .3px; }
-.grid-header .col-hours { text-align: right; }
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.kb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  white-space: nowrap;
+  font: 600 var(--fs-input)/1 var(--font-sans);
+  padding: 10px 16px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; cursor: pointer; transition: background .14s, border-color .14s, color .14s;
+}
+.kb-btn svg { width: 16px; height: 16px; }
+.kb-btn--primary { background: var(--accent); color: var(--on-accent); }
+.kb-btn--primary:hover { background: var(--accent-hover); }
+.kb-btn--primary:disabled { opacity: .5; cursor: not-allowed; }
+.kb-btn--ghost { background: var(--surface); color: var(--text-soft); border-color: var(--border-strong); }
+.kb-btn--ghost:hover { border-color: var(--accent); color: var(--accent); }
+.kb-btn--soft { background: var(--accent-soft); color: var(--accent); }
+.kb-btn--soft:hover { background: var(--accent); color: var(--on-accent); }
+.kb-btn--dashed { background: transparent; color: var(--accent); border: 1px dashed var(--accent-border); }
+.kb-btn--dashed:hover { background: var(--accent-soft); border-color: var(--accent); }
+.kb-btn--lg { padding: 12px 24px; font-size: calc(15px * var(--font-scale)); }
+.kb-circbtn {
+  width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 15px; line-height: 1; font-weight: 700; cursor: pointer; padding: 0;
+  background: var(--surface); border: 1px solid var(--accent); color: var(--accent);
+}
+.kb-circbtn:hover { background: var(--accent); color: var(--on-accent); }
+.kb-circbtn--rm { border-color: var(--danger); color: var(--danger); }
+.kb-circbtn--rm:hover { background: var(--danger); color: #fff; }
 
-/* Day block */
-.day-block { position: relative; }
-.day-divider { height: 5px; background: #fff; margin: 0 4px; }
+/* ── Notes / validation banners ─────────────────────────────────────────── */
+.kb-note {
+  border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 14px;
+  font-size: var(--fs-small); line-height: 1.7;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.kb-note svg { width: 17px; height: 17px; flex: 0 0 17px; margin-top: 1px; }
+.kb-note--error   { background: var(--danger-soft);  border: 1px solid var(--danger-border);  color: var(--danger); }
+.kb-note--warning { background: var(--warning-soft); border: 1px solid var(--warning-border); color: var(--warning); }
+.kb-note--success { background: var(--success-soft); border: 1px solid var(--success-border); color: var(--success); }
+.kb-note--info    { background: var(--info-soft);    border: 1px solid var(--info-border);    color: var(--info); }
+.kb-note b { font-weight: 700; }
+.kb-note ul { padding-left: 18px; margin-top: 4px; }
+.kb-note li { margin: 1px 0; }
 
-/* Row */
-.ts-row {
+/* ── Row grid (timesheet entries) ───────────────────────────────────────── */
+.kb-rowhead, .ts-row2 {
   display: grid;
-  grid-template-columns: 68px 90px 90px 90px minmax(60px,1fr) 56px 48px;
-  gap: 4px;
-  padding: 5px 4px;
-  border-left: 4px solid transparent;
   align-items: center;
+  gap: 6px;
+  grid-template-columns: 108px 96px 96px 108px 1fr 58px 52px;
+}
+.kb-rowhead {
+  padding: 0 10px 8px;
+  font-size: var(--fs-label); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+}
+.kb-rowhead .r { text-align: right; }
+.ts-row2 {
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
   position: relative;
 }
-.ts-row:hover .row-actions { opacity: 1; }
-.ts-row.continuation .col-date-cell { visibility: hidden; }
-
-.col-date-cell { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
-.col-date-cell .dow { font-size: 10px; font-weight: 400; color: var(--muted); }
-
-.ts-row input[type="time"] { padding: 4px 6px; font-size: 13px; width: 100%; }
-.ts-row select { padding: 4px 4px; font-size: 12px; width: 100%; }
-.ts-row input[type="text"] { padding: 4px 8px; font-size: 13px; width: 100%; }
-.col-hours-cell { font-size: 12px; font-weight: 600; text-align: right; color: var(--text); white-space: nowrap; padding-right: 2px; }
-
-/* Row actions (+/-) */
-.row-actions { opacity: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
-.btn-add-row, .btn-rm-row {
-  width: 22px; height: 22px; border-radius: 50%; border: 1px solid; cursor: pointer;
-  font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; padding: 0; font-family: inherit; flex-shrink: 0;
+.ts-row2:hover { background: var(--surface-2); }
+.ts-row2.continuation .ts-date { visibility: hidden; }
+.ts-row2 input[type="time"] { font-family: var(--font-mono); }
+.ts-date { font-weight: 600; font-size: var(--fs-small); color: var(--text); white-space: nowrap; }
+.ts-date .dow { display: block; font-weight: 500; font-size: 11px; color: var(--text-muted); }
+.ts-hours { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-small); font-weight: 600; color: var(--text); white-space: nowrap; }
+.ts-actions { display: flex; align-items: center; justify-content: flex-end; gap: 3px; opacity: 0; transition: opacity .15s; }
+.ts-row2:hover .ts-actions { opacity: 1; }
+.ts-unlock {
+  display: none; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  position: absolute; right: 0; top: 0; bottom: 0; padding: 0 8px;
+  background: inherit; border-radius: var(--radius-sm);
 }
-.btn-add-row { background: #fff; color: var(--accent); border-color: var(--accent); }
-.btn-add-row:hover { background: var(--accent); color: #fff; }
-.btn-rm-row { background: #fff; color: var(--err); border-color: var(--err); }
-.btn-rm-row:hover { background: var(--err); color: #fff; }
+.ts-row2:hover .ts-unlock { display: flex; }
+.ts-unlock input[type="checkbox"] { width: 13px; height: 13px; margin: 0; cursor: pointer; }
 
-/* Unlock checkbox */
-.unlock-wrap { display: none; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; position: absolute; right: 0; top: 0; bottom: 0; padding: 0 8px; background: inherit; }
-.ts-row:hover .unlock-wrap { display: flex; }
-.unlock-wrap input[type="checkbox"] { width: 13px; height: 13px; margin: 0; cursor: pointer; }
+/* Inline day validation */
+.ts-day-val {
+  font-size: 11px; padding: 4px 10px 4px 13px; line-height: 1.6;
+  color: var(--danger);
+}
+.ts-day-val .warn { color: var(--warning); }
 
-/* Validation highlights */
-.ts-row .input-err { border-color: var(--err) !important; }
-.ts-row .input-warn { border-color: var(--warn) !important; }
+/* Code chip legend */
+.ts-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.kb-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: var(--fs-small); font-weight: 600; line-height: 1.3;
+  white-space: nowrap;
+  background: var(--chip-bg, var(--surface-3));
+  border: 1px solid var(--chip-border, var(--border-strong));
+  color: var(--chip-text, var(--text-soft));
+}
+.kb-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-border, var(--text-muted)); flex-shrink: 0; }
 
-/* Inline day validation messages */
-.day-val { font-size: 11px; padding: 4px 8px 4px 12px; line-height: 1.6; }
-.day-val .err-line { color: var(--err); }
-.day-val .warn-line { color: var(--warn); }
+/* ── Totals panel ───────────────────────────────────────────────────────── */
+.kb-totals { margin-left: auto; width: min(420px, 100%); }
+.kb-totals--fill { margin-left: 0; width: 100%; }
+.kb-totals .row { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; font-size: var(--fs-base); }
+.kb-totals .row .lab { color: var(--text-muted); }
+.kb-totals .row .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.kb-totals .grand {
+  margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border-strong);
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+}
+.kb-totals .grand .lab { font-weight: 700; color: var(--text); }
+.kb-totals .grand .val { font-family: var(--font-mono); font-weight: 700; font-size: calc(20px * var(--font-scale)); color: var(--accent); font-variant-numeric: tabular-nums; }
+.kb-totals .note { margin-top: 12px; font-size: var(--fs-small); color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; line-height: 1.6; }
 
-/* Footer summary */
-.summary-block { margin-top: 20px; padding: 16px 20px; background: #f5f6f8; border-radius: 6px; border: 1px solid var(--border); }
-.summary-row { display: flex; justify-content: flex-end; gap: 12px; font-size: 13px; padding: 2px 0; }
-.summary-row .label { color: var(--muted); }
-.summary-row .value { font-weight: 600; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
-.summary-note { margin-top: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
-.summary-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+/* ── Signature ──────────────────────────────────────────────────────────── */
+.kb-sig { border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); height: 100px; display: block; max-width: 100%; touch-action: none; cursor: crosshair; }
+.sig-controls { display: flex; gap: 8px; margin-top: 8px; }
 
-/* Action row */
-.action-row { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
-.action-row .spacer { flex: 1; }
+/* ── Action row ─────────────────────────────────────────────────────────── */
+.kb-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.kb-actions .spacer { flex: 1; }
 
-/* Signature area */
-.sig-section { margin-top: 24px; }
-.sig-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; letter-spacing: .3px; }
-.sig-canvas { border: 1px solid var(--border); border-radius: 4px; cursor: crosshair; background: #fff; display: block; max-width: 100%; touch-action: none; }
-.sig-controls { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+/* ── Modal ──────────────────────────────────────────────────────────────── */
+.kb-overlay {
+  position: fixed; inset: 0; background: rgba(20,24,30,.35); z-index: 9999;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.kb-modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 24px 28px; max-width: 420px; width: 100%;
+}
+.kb-modal__hdr {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  font-size: var(--fs-title); font-weight: 700; color: var(--text);
+}
+.kb-modal__body {
+  font-size: var(--fs-small); line-height: 1.7; color: var(--text-soft); margin-bottom: 20px;
+}
+.kb-modal__body p { margin-bottom: 10px; }
+.kb-modal__body p:last-child { margin-bottom: 0; }
+.kb-modal__body strong { font-weight: 700; color: var(--text); }
+.kb-modal__body a { color: var(--accent); }
+.kb-modal__footer { display: flex; justify-content: flex-end; gap: 8px; }
 
-/* Modal */
-.modal-overlay { position: fixed; top:0; right:0; bottom:0; left:0; background: rgba(0,0,0,.45); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.modal-box { background: #fff; border-radius: 8px; padding: 24px 28px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
-.modal-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.modal-body { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 20px; text-align: left; }
-.modal-body p { margin-bottom: 10px; }
-.modal-body strong { font-weight: 700; }
-.modal-body a { color: var(--accent); }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.kb-footer {
+  max-width: 980px; margin: 0 auto; padding: 16px 20px 8px;
+  font-size: var(--fs-small); color: var(--text-muted);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.kb-footer a { color: var(--text-muted); text-decoration: none; }
+.kb-footer a:hover { color: var(--accent); text-decoration: underline; }
+.kb-footer .sep { opacity: .45; }
+.kb-mark { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-soft); }
 
-/* App footer */
-.app-footer { max-width: 980px; margin: 12px auto 24px; text-align: center; font-size: 12px; color: var(--muted); }
-.app-footer a { color: var(--muted); text-decoration: none; }
-.app-footer a:hover { color: var(--accent); text-decoration: underline; }
-.app-footer button.footer-about { background: none; border: none; padding: 0; font-size: 12px; color: var(--muted); cursor: pointer; font-family: inherit; }
-.app-footer button.footer-about:hover { color: var(--accent); text-decoration: underline; }
+/* ── Loading / error ────────────────────────────────────────────────────── */
+.kb-loading { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: var(--fs-base); }
+.kb-error { color: var(--danger); }
 
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 700px) {
-  .wrap { margin: 8px; padding: 16px; }
-  .frow { flex-direction: column; gap: 10px; }
-  .form-hdr { flex-direction: column; gap: 8px; }
-  .grid-header, .ts-row { grid-template-columns: 60px 82px 82px 80px minmax(60px,1fr) 50px 48px; }
+  .kb-grid.cols-3, .kb-grid.cols-5 { grid-template-columns: 1fr 1fr; }
+  .kb-grid.cols-2 { grid-template-columns: 1fr; }
+  .kb-header { flex-direction: column; gap: 14px; }
+  .kb-doctitle { text-align: left; }
+  .kb-rowhead { display: none; }
+  .ts-row2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px; padding: 12px;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    border-left-width: 4px;
+    margin-bottom: 8px;
+  }
+  .ts-row2.continuation .ts-date { display: none; }
+}
+@media print {
+  .kb-toolbar, .kb-actions, .sig-controls, .kb-footer { display: none !important; }
 }
 </style>
 </head>
 <body>
-<div id="app"><p class="loading">Loading configuration…</p></div>
-<div class="app-footer">
-  © 2026 Kristian Benestad &nbsp;•&nbsp;
-  <a href="https://docs.benestad.net/invoice" target="_blank" rel="noopener">docs.benestad.net</a> &nbsp;•&nbsp;
-  <a href="https://github.com/kbenestad/invoice" target="_blank" rel="noopener">kbenestad/invoice</a> &nbsp;•&nbsp;
-  <button class="footer-about" id="footer-about-btn">About</button>
-</div>
+<div id="app"><p class="kb-loading">Loading configuration…</p></div>
+
+<footer class="kb-footer">
+  <span class="kb-mark">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <rect x="1" y="5" width="11" height="11" rx="3" fill="var(--accent)"/>
+      <rect x="6" y="1" width="11" height="11" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+    </svg>
+    kBenestad
+  </span>
+  <span class="sep">·</span>
+  <span>© 2026 Kristian Benestad</span>
+  <span class="sep">·</span>
+  <a href="https://docs.benestad.net" target="_blank" rel="noopener">docs.benestad.net</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/kbenestad/timesheet" target="_blank" rel="noopener">kbenestad/timesheet</a>
+</footer>
 
 <script>
 (async function() {
@@ -212,7 +455,6 @@ function calcRowMins(row) {
   return outM - inM;
 }
 
-// Day of week utilities
 const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_NAMES_VI = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
@@ -261,7 +503,7 @@ async function loadConfig() {
   const res = await fetch('config.yml');
   if (!res.ok) throw new Error('Cannot load config.yml');
   CFG = jsyaml.load(await res.text());
-  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#1a3a5c');
+  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#2f6fed');
 }
 
 function S(key) {
@@ -299,11 +541,10 @@ const state = {
   lang: 'en',
   periodFrom: '',
   periodTo: '',
-  days: {},     // dateStr -> [row, ...]
-  unlocks: {},  // rowKey -> true
+  days: {},
+  unlocks: {},
 };
 
-// rowKey: `${dateStr}-${rowIndex}`
 function rowKey(dateStr, idx) { return `${dateStr}-${idx}`; }
 
 // ========== ROW DEFAULTS ==========
@@ -338,7 +579,6 @@ function defaultRowsForDay(dateStr, empType) {
   if (prefilled === 'non-working') {
     return [{ code: 'NON', timeIn: '', timeOut: '', desc: '', _locked: true }];
   }
-  // prefilled === 'working' (default)
   return [{ code: defCode, timeIn: wstart, timeOut: wend, desc: '', _locked: false }];
 }
 
@@ -350,7 +590,6 @@ function buildDefaultDays(from, to, empType) {
   return days;
 }
 
-// Is a given row effectively locked (considering unlock overrides)?
 function isRowLocked(dateStr, idx, row) {
   if (state.unlocks[rowKey(dateStr, idx)]) return false;
   return row._locked === true;
@@ -361,13 +600,9 @@ let autoSaveTimer = null;
 
 function saveState() {
   const serial = {
-    employee: state.employee,
-    empType: state.empType,
-    lang: state.lang,
-    periodFrom: state.periodFrom,
-    periodTo: state.periodTo,
-    days: state.days,
-    unlocks: state.unlocks,
+    employee: state.employee, empType: state.empType, lang: state.lang,
+    periodFrom: state.periodFrom, periodTo: state.periodTo,
+    days: state.days, unlocks: state.unlocks,
   };
   try { localStorage.setItem('ts-state', JSON.stringify(serial)); } catch(e) {}
 }
@@ -419,39 +654,49 @@ function computeTotals() {
 // ========== MODALS ==========
 function showConfirmModal(msgHTML) {
   return new Promise(resolve => {
-    const overlay = el('div', {className:'modal-overlay'});
-    const box = el('div', {className:'modal-box'});
-    const hdr = el('div', {className:'modal-hdr'});
-    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
-    const body = el('div', {className:'modal-body'});
+    const overlay = el('div', {className:'kb-overlay'});
+    const modal = el('div', {className:'kb-modal'});
+    const hdr = el('div', {className:'kb-modal__hdr'});
+    // warning icon
+    const warnSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    warnSvg.setAttribute('width','20'); warnSvg.setAttribute('height','20');
+    warnSvg.setAttribute('viewBox','0 0 24 24'); warnSvg.setAttribute('fill','none');
+    warnSvg.setAttribute('stroke','var(--warning)'); warnSvg.setAttribute('stroke-width','2');
+    warnSvg.setAttribute('stroke-linecap','round'); warnSvg.setAttribute('stroke-linejoin','round');
+    const warnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    warnPath.setAttribute('d','M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01');
+    warnSvg.appendChild(warnPath);
+    hdr.append(warnSvg, el('span', null, state.lang === 'vi' ? 'Xác nhận' : 'Confirm'));
+    const body = el('div', {className:'kb-modal__body'});
     body.innerHTML = msgHTML;
-    const footer = el('div', {className:'modal-footer'});
-    const cancelBtn = el('button', {className:'btn btn-secondary', style:{padding:'8px 18px'}}, S('btn-validate') === 'Validate' ? 'Cancel' : 'Huỷ');
-    const confirmBtn = el('button', {className:'btn btn-gen', style:{marginTop:'0',width:'auto',padding:'8px 24px'}}, S('btn-new'));
+    const footer = el('div', {className:'kb-modal__footer'});
+    const cancelBtn = el('button', {className:'kb-btn kb-btn--ghost'}, state.lang === 'vi' ? 'Huỷ' : 'Cancel');
+    const confirmBtn = el('button', {className:'kb-btn kb-btn--primary'}, S('btn-new'));
     cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(false); });
     confirmBtn.addEventListener('click', () => { overlay.remove(); resolve(true); });
     footer.append(cancelBtn, confirmBtn);
-    box.append(hdr, body, footer);
-    overlay.appendChild(box);
+    modal.append(hdr, body, footer);
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
     document.body.appendChild(overlay);
     cancelBtn.focus();
   });
 }
 
 function showAboutModal() {
-  const overlay = el('div', {className:'modal-overlay'});
-  const box = el('div', {className:'modal-box'});
-  const hdr = el('div', {className:'modal-hdr'});
-  hdr.append(el('strong', {style:{fontSize:'16px'}}, CFG['about-title'] || 'About'));
-  const body = el('div', {className:'modal-body'});
+  const overlay = el('div', {className:'kb-overlay'});
+  const modal = el('div', {className:'kb-modal'});
+  const hdr = el('div', {className:'kb-modal__hdr'});
+  hdr.append(el('span', null, CFG['about-title'] || 'About'));
+  const body = el('div', {className:'kb-modal__body'});
   body.innerHTML = markdownToHTML(CFG['about-content'] || '');
-  const footer = el('div', {className:'modal-footer'});
-  const closeBtn = el('button', {className:'btn btn-gen', style:{marginTop:'0',width:'auto',padding:'8px 24px'}}, CFG['about-button'] || 'Close');
+  const footer = el('div', {className:'kb-modal__footer'});
+  const closeBtn = el('button', {className:'kb-btn kb-btn--primary'}, CFG['about-button'] || 'Close');
   closeBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   footer.append(closeBtn);
-  box.append(hdr, body, footer);
-  overlay.appendChild(box);
+  modal.append(hdr, body, footer);
+  overlay.appendChild(modal);
   document.body.appendChild(overlay);
   closeBtn.focus();
 }
@@ -469,8 +714,8 @@ function markdownToHTML(md) {
 
 // ========== VALIDATION ==========
 function runValidation() {
-  const errors = []; // blocking
-  const warnings = []; // non-blocking
+  const errors = [];
+  const warnings = [];
 
   const wstartM = parseHM(workStart());
   const wendM   = parseHM(workEnd());
@@ -490,7 +735,6 @@ function runValidation() {
       if (locked) continue;
       if (!row.code || row.code === 'WEEKEND') continue;
 
-      // Time order check
       const inM  = parseHM(row.timeIn);
       const outM = parseHM(row.timeOut);
       if (inM != null && outM != null && outM <= inM) {
@@ -500,13 +744,11 @@ function runValidation() {
         dayTotalMins += (outM - inM);
       }
 
-      // Description required for REG and OTH
       if ((row.code === 'REG' || row.code === 'OTH') && !row.desc.trim()) {
         errors.push(`${displayDate}: ${S('val-desc-required')} (${row.code})`);
       }
     }
 
-    // Overlap check
     const sorted = [...intervals].sort((a,b) => a[0]-b[0]);
     for (let i = 1; i < sorted.length; i++) {
       if (sorted[i][0] < sorted[i-1][1]) {
@@ -515,12 +757,10 @@ function runValidation() {
       }
     }
 
-    // Daily hours exceed standard
     if (stdMins != null && dayTotalMins > stdMins) {
       warnings.push(`${displayDate}: ${S('val-hours-exceed')} (${fmtHM(dayTotalMins)} > ${fmtHM(stdMins)})`);
     }
 
-    // Unlocked workday rows with no code
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const locked = isRowLocked(ds, i, row);
@@ -532,10 +772,8 @@ function runValidation() {
     }
   }
 
-  // Build per-date map for inline display
   const byDate = {};
   [...errors, ...warnings].forEach(msg => {
-    // Messages are prefixed with the formatted date; find the matching dateStr
     for (const ds of sortedDates) {
       if (msg.startsWith(fmtDate(ds, state.lang) + ':')) {
         if (!byDate[ds]) byDate[ds] = { errors: [], warnings: [] };
@@ -551,15 +789,14 @@ function runValidation() {
 // ========== ROW COLOUR ==========
 function applyRowColour(rowEl, dateStr, row, rowIndex, totalRowsForDay) {
   const code = row.code;
-  const isLocked = isRowLocked(dateStr, rowIndex, row);
   const mutedbg = CFG['muted-background'] === true || CFG['muted-background'] === 'yes';
 
   rowEl.style.borderLeftColor = '';
   rowEl.style.background = '';
 
   if (!code || code === 'WEEKEND') {
-    rowEl.style.borderLeftColor = '#c0c0c0';
-    if (mutedbg) rowEl.style.background = '#ebebeb';
+    rowEl.style.borderLeftColor = 'var(--border-strong)';
+    if (mutedbg) rowEl.style.background = 'var(--surface-3)';
     return;
   }
 
@@ -578,17 +815,7 @@ function applyRowColour(rowEl, dateStr, row, rowIndex, totalRowsForDay) {
   }
 
   if (borderCol) rowEl.style.borderLeftColor = borderCol;
-  if (bgCol && mutedbg) {
-    rowEl.style.background = bgCol;
-  }
-}
-
-function hexWithOpacity(hex, opacity) {
-  const h = hex.replace('#','');
-  const r = parseInt(h.slice(0,2),16);
-  const g = parseInt(h.slice(2,4),16);
-  const b = parseInt(h.slice(4,6),16);
-  return `rgba(${r},${g},${b},${opacity})`;
+  if (bgCol && mutedbg) rowEl.style.background = bgCol;
 }
 
 // ========== SIGNATURE ==========
@@ -611,124 +838,226 @@ function needsSignature() {
 function renderSignatureArea(wrap) {
   if (!needsSignature()) return;
 
-  const section = el('div', {className:'sig-section'});
-  section.appendChild(el('div', {className:'sig-label'}, S('signature-employee')));
+  const card = el('div', {className: 'kb-card'});
+  const title = el('h2', {className: 'kb-card__title'}, S('signature-employee'));
+  card.appendChild(title);
 
-  const canvas = el('canvas', {width:500, height:110, className:'sig-canvas'});
-  const ctx = canvas.getContext('2d');
+  const grid = el('div', {className: 'kb-grid cols-2', style: {gap: '18px'}});
 
-  if (signatureDataUrl) {
-    const img = new Image();
-    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    img.src = signatureDataUrl;
-  }
+  function makeSigField(labelKey) {
+    const field = el('div', {className: 'kb-field'});
+    field.appendChild(el('span', {className: 'kb-label'}, S(labelKey)));
 
-  function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
-    const src = e.touches ? e.touches[0] : e;
-    return [(src.clientX - rect.left) * sx, (src.clientY - rect.top) * sy];
-  }
+    const canvas = el('canvas', {width: 500, height: 100, className: 'kb-sig'});
+    const ctx = canvas.getContext('2d');
 
-  let drawing = false, lx = 0, ly = 0;
-
-  function startDraw(e) {
-    drawing = true;
-    [lx, ly] = getPos(e);
-  }
-  function moveDraw(e) {
-    if (!drawing) return;
-    const [x, y] = getPos(e);
-    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, y);
-    ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.stroke();
-    [lx, ly] = [x, y];
-    saveSignature(canvas.toDataURL('image/png'));
-  }
-  function stopDraw() { drawing = false; }
-
-  canvas.addEventListener('mousedown', startDraw);
-  canvas.addEventListener('mousemove', moveDraw);
-  canvas.addEventListener('mouseup', stopDraw);
-  canvas.addEventListener('mouseleave', stopDraw);
-  canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); }, {passive:false});
-  canvas.addEventListener('touchmove',  e => { e.preventDefault(); moveDraw(e);  }, {passive:false});
-  canvas.addEventListener('touchend', stopDraw);
-
-  const clearBtn = el('button', {type:'button', className:'btn btn-secondary'}, 'Clear');
-  clearBtn.style.cssText = 'font-size:12px;padding:4px 12px';
-  clearBtn.addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    saveSignature(null);
-  });
-
-  const fileInput = el('input', {type:'file', accept:'image/*'});
-  fileInput.style.display = 'none';
-  const uploadBtn = el('button', {type:'button', className:'btn btn-secondary'}, 'Upload image');
-  uploadBtn.style.cssText = 'font-size:12px;padding:4px 12px';
-  uploadBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
+    if (labelKey === 'signature-employee' && signatureDataUrl) {
       const img = new Image();
-      img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
-        const dw = img.width * scale, dh = img.height * scale;
-        ctx.drawImage(img, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
-        saveSignature(canvas.toDataURL('image/png'));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
+      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = signatureDataUrl;
+    }
 
-  const controls = el('div', {className:'sig-controls'});
-  controls.append(clearBtn, uploadBtn, fileInput);
-  section.append(canvas, controls);
-  wrap.appendChild(section);
+    if (labelKey === 'signature-employee') {
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return [(src.clientX - rect.left) * sx, (src.clientY - rect.top) * sy];
+      }
+
+      let drawing = false, lx = 0, ly = 0;
+
+      function startDraw(e) { drawing = true; [lx, ly] = getPos(e); }
+      function moveDraw(e) {
+        if (!drawing) return;
+        const [x, y] = getPos(e);
+        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, y);
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#14181e';
+        ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.stroke();
+        [lx, ly] = [x, y];
+        saveSignature(canvas.toDataURL('image/png'));
+      }
+      function stopDraw() { drawing = false; }
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', moveDraw);
+      canvas.addEventListener('mouseup', stopDraw);
+      canvas.addEventListener('mouseleave', stopDraw);
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); }, {passive:false});
+      canvas.addEventListener('touchmove',  e => { e.preventDefault(); moveDraw(e);  }, {passive:false});
+      canvas.addEventListener('touchend', stopDraw);
+
+      const controls = el('div', {className: 'sig-controls'});
+      const clearBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost'}, 'Clear');
+      clearBtn.style.cssText = 'font-size:12px;padding:4px 12px';
+      clearBtn.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        saveSignature(null);
+      });
+
+      const fileInput = el('input', {type:'file', accept:'image/*', style:{display:'none'}});
+      const uploadBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost'}, 'Upload image');
+      uploadBtn.style.cssText = 'font-size:12px;padding:4px 12px';
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
+            const dw = img.width * scale, dh = img.height * scale;
+            ctx.drawImage(img, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+            saveSignature(canvas.toDataURL('image/png'));
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      controls.append(clearBtn, uploadBtn, fileInput);
+      field.append(canvas, controls);
+    } else {
+      canvas.style.cursor = 'default';
+      field.appendChild(canvas);
+    }
+
+    return field;
+  }
+
+  grid.append(makeSigField('signature-employee'), makeSigField('signature-authorised'));
+  card.appendChild(grid);
+  wrap.appendChild(card);
 }
 
 // ========== RENDER ==========
 let validationResult = null;
 
+function buildChipStyle(tag, attrs, cObj, code, totalRowsForDay) {
+  let border, bg, text;
+  if (code === 'PPT' && cObj) {
+    const full = totalRowsForDay === 1;
+    border = full ? cObj['colour-border-fullday'] : cObj['colour-border-partialday'];
+    bg     = full ? cObj['colour-bg-fullday']     : cObj['colour-bg-partialday'];
+  } else if (cObj) {
+    border = cObj['colour-border'];
+    bg     = cObj['colour-bg'];
+  }
+  const chipEl = el(tag, attrs);
+  if (border) chipEl.style.setProperty('--chip-border', border);
+  if (bg)     chipEl.style.setProperty('--chip-bg', bg);
+  // derive text as the border colour (darkened is fine; bg is pale)
+  if (border) chipEl.style.setProperty('--chip-text', border);
+  return chipEl;
+}
+
 function render() {
   const app = $('#app');
   app.innerHTML = '';
-  const wrap = el('div', {className:'wrap'});
+  const wrap = el('div', {className:'kb-wrap'});
 
-  // Val box
-  const valBox = el('div', {id:'val-box'});
-  wrap.appendChild(valBox);
+  // ── Toolbar
+  const toolbar = el('div', {className:'kb-toolbar'});
 
-  // Header
-  const hdr = el('div', {className:'form-hdr'});
-  const logoDiv = el('div', {className:'logo'});
+  const langSeg = el('div', {className:'kb-seg', role:'group'});
+  (CFG.languages || [{code:'en', display:'EN'}]).forEach(l => {
+    const btn = el('button', {type:'button', className: state.lang === l.code ? 'is-active' : ''}, l.display);
+    btn.addEventListener('click', () => {
+      state.lang = l.code;
+      localStorage.setItem('timesheet-lang', l.code);
+      scheduleAutoSave();
+      render();
+    });
+    langSeg.appendChild(btn);
+  });
+
+  const sizeSeg = el('div', {className:'kb-seg', role:'group'});
+  [['A−', -0.1], ['A', 0], ['A+', 0.1]].forEach(([label, delta]) => {
+    const btn = el('button', {type:'button'}, label);
+    btn.addEventListener('click', () => {
+      if (delta === 0) {
+        document.documentElement.style.removeProperty('--font-scale');
+        localStorage.removeItem('ts-fontscale');
+      } else {
+        const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-scale') || '1');
+        const nxt = Math.max(0.8, Math.min(1.3, (cur || 1) + delta));
+        document.documentElement.style.setProperty('--font-scale', nxt.toFixed(1));
+        localStorage.setItem('ts-fontscale', nxt.toFixed(1));
+      }
+    });
+    sizeSeg.appendChild(btn);
+  });
+
+  const themeBtn = el('button', {type:'button', className:'kb-iconbtn', 'aria-label':'Toggle theme'});
+  themeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+  themeBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const isDark = cur === 'dark' || (!cur && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  });
+
+  const aboutBtn = el('button', {type:'button', className:'kb-iconbtn', 'aria-label':'About'});
+  aboutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
+  aboutBtn.addEventListener('click', showAboutModal);
+
+  toolbar.append(langSeg, el('div', {className:'spacer'}), sizeSeg, themeBtn, aboutBtn);
+  wrap.appendChild(toolbar);
+
+  // ── Document header
+  const hdr = el('div', {className:'kb-header'});
+  const brand = el('div', {className:'kb-brand'});
+  const logoTile = el('span', {className:'logo'});
   if (CFG.logo === true || CFG.logo === 'yes') {
     const img = el('img', {alt: CFG.organization || ''});
     img.src = 'assets/logo.png';
     img.onerror = function() {
       this.src = 'assets/logo.jpg';
-      this.onerror = function() { this.replaceWith(el('span', {className:'org-name'}, CFG.organization || '')); };
+      this.onerror = function() {
+        const initials = (CFG.organization || 'TS').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        logoTile.textContent = initials;
+      };
     };
-    if (CFG['logo-maxwidth']) img.style.maxWidth = CFG['logo-maxwidth'] + 'cm';
-    logoDiv.appendChild(img);
+    logoTile.appendChild(img);
   } else {
-    logoDiv.appendChild(el('span', {className:'org-name'}, CFG.organization || ''));
+    logoTile.textContent = (CFG.organization || 'TS').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
   }
-  hdr.append(logoDiv, el('div', {className:'title'}, 'TIMESHEET'));
+  const orgEl = el('span', {className:'org'});
+  orgEl.appendChild(document.createTextNode(CFG.organization || ''));
+  const empTypeObj2 = empTypeObj(state.empType);
+  const typeDisp = empTypeObj2 ? ((typeof empTypeObj2.display === 'object') ? (empTypeObj2.display[state.lang] || empTypeObj2.display['en'] || state.empType) : (empTypeObj2.display || state.empType)) : '';
+  const orgSmall = el('small');
+  orgSmall.textContent = `${S('col-date').toLowerCase() === 'date' ? 'Timesheet' : 'Bảng chấm công'}${typeDisp ? ' · ' + typeDisp : ''}`;
+  orgEl.appendChild(orgSmall);
+  brand.append(logoTile, orgEl);
+
+  const docTitle = el('div', {className:'kb-doctitle'});
+  const h1 = el('h1', null, state.lang === 'vi' ? 'Bảng chấm công' : 'Timesheet');
+  const metaDiv = el('div', {className:'meta'});
+  metaDiv.textContent = (state.periodFrom && state.periodTo)
+    ? `${fmtDate(state.periodFrom, state.lang)} – ${fmtDate(state.periodTo, state.lang)}`
+    : '—';
+  docTitle.append(h1, metaDiv);
+  hdr.append(brand, docTitle);
   wrap.appendChild(hdr);
 
-  // Header fields
-  const employeeInput = el('input', {type:'text', value: state.employee, placeholder: S('employee-label')});
+  // ── Validation box
+  const valBox = el('div', {id:'val-box'});
+  wrap.appendChild(valBox);
+
+  // ── Employee / period card
+  const empCard = el('div', {className:'kb-card'});
+  const empGrid = el('div', {className:'kb-grid cols-5'});
+
+  const employeeInput = el('input', {type:'text', className:'kb-input', value: state.employee, placeholder: S('employee-label')});
   employeeInput.addEventListener('input', () => {
     state.employee = employeeInput.value;
     localStorage.setItem('timesheet-employee', employeeInput.value);
     scheduleAutoSave();
   });
 
-  const empTypeSelect = el('select');
+  const empTypeSelect = el('select', {className:'kb-select'});
   const empTypes = CFG['employee-types'] || [{code:'salaried', display:'Salaried'}, {code:'hourly', display:'Hourly'}];
   empTypes.forEach(t => {
     const disp = (typeof t.display === 'object') ? (t.display[state.lang] || t.display['en'] || t.code) : (t.display || t.code);
@@ -741,20 +1070,9 @@ function render() {
     scheduleAutoSave();
   });
 
-  const langSelect = el('select');
-  (CFG.languages || [{code:'en',display:'English'}]).forEach(l => {
-    langSelect.appendChild(el('option', {value:l.code, ...(state.lang === l.code ? {selected:''} : {})}, l.display));
-  });
-  langSelect.addEventListener('change', () => {
-    state.lang = langSelect.value;
-    localStorage.setItem('timesheet-lang', langSelect.value);
-    scheduleAutoSave();
-    render();
-  });
-
-  const fromInput = el('input', {type:'date'});
+  const fromInput = el('input', {type:'date', className:'kb-input'});
   fromInput.value = state.periodFrom;
-  const toInput = el('input', {type:'date'});
+  const toInput = el('input', {type:'date', className:'kb-input'});
   toInput.value = state.periodTo;
 
   function onPeriodChange() {
@@ -762,6 +1080,9 @@ function render() {
     if (nf && nt && nf <= nt) {
       state.periodFrom = nf;
       state.periodTo = nt;
+      // Update header meta
+      const metaEl = document.querySelector('.kb-doctitle .meta');
+      if (metaEl) metaEl.textContent = `${fmtDate(nf, state.lang)} – ${fmtDate(nt, state.lang)}`;
       regenerateDays();
       scheduleAutoSave();
     }
@@ -769,75 +1090,90 @@ function render() {
   fromInput.addEventListener('change', onPeriodChange);
   toInput.addEventListener('change', onPeriodChange);
 
-  const newBtn = el('button', {type:'button', className:'btn btn-new', onClick: onNewTimesheet}, S('btn-new'));
+  function mkField(label, inputEl) {
+    const f = el('div', {className:'kb-field'});
+    f.append(el('span', {className:'kb-label'}, label), inputEl);
+    return f;
+  }
 
-  wrap.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [
-      el('label', null, S('employee-label')),
-      el('div', {style:{display:'flex',gap:'8px',alignItems:'center'}}, [employeeInput, newBtn])
-    ]),
-    el('div', {className:'fgrp'}, [el('label', null, S('period-label')), fromInput]),
-    el('div', {className:'fgrp'}, [el('label', null, S('period-to')), toInput]),
-    el('div', {className:'fgrp'}, [el('label', null, S('employee-type-label')), empTypeSelect]),
-    el('div', {className:'fgrp'}, [el('label', null, S('language-label')), langSelect]),
-  ]));
+  empGrid.append(
+    mkField(S('employee-label'), employeeInput),
+    mkField(S('employee-type-label'), empTypeSelect),
+    mkField(S('period-label'), fromInput),
+    mkField(S('period-to'), toInput),
+  );
+  empCard.appendChild(empGrid);
+  wrap.appendChild(empCard);
 
-  wrap.appendChild(el('hr', {className:'divider'}));
+  // ── Daily entries card
+  const entriesCard = el('div', {className:'kb-card'});
+  entriesCard.appendChild(el('h2', {className:'kb-card__title'}, state.lang === 'vi' ? 'Ngày làm việc' : 'Daily entries'));
+
+  // Legend chips — from config codes
+  const legend = el('div', {className:'ts-legend'});
+  codesForType(state.empType).forEach(c => {
+    const dispKey = `display-${state.lang}`;
+    const label = c[dispKey] || c['display-en'] || c.code;
+    const chip = buildChipStyle('span', {className:'kb-chip'}, c, c.code, 1);
+    const dot = el('span', {className:'dot'});
+    if (c['colour-border']) dot.style.background = c['colour-border'];
+    chip.append(dot, document.createTextNode(`${c.code} · ${label}`));
+    legend.appendChild(chip);
+  });
+  entriesCard.appendChild(legend);
 
   // Grid header
-  const gridWrap = el('div', {className:'grid-wrap', id:'grid-wrap'});
-  const ghdr = el('div', {className:'grid-header'});
+  const gridWrap = el('div', {id:'grid-wrap'});
+  const ghdr = el('div', {className:'kb-rowhead'});
   ghdr.append(
     el('span', null, S('col-date')),
     el('span', null, S('col-time-in')),
     el('span', null, S('col-time-out')),
     el('span', null, S('col-code')),
     el('span', null, S('col-description')),
-    el('span', {className:'col-hours'}, S('col-hours')),
+    el('span', {className:'r'}, S('col-hours')),
     el('span', null, '')
   );
   gridWrap.appendChild(ghdr);
 
   const datesInPeriod = dateRange(state.periodFrom, state.periodTo);
-  datesInPeriod.forEach((ds, di) => {
-    if (di > 0) gridWrap.appendChild(el('div', {className:'day-divider'}));
-    gridWrap.appendChild(renderDayBlock(ds));
-  });
-  wrap.appendChild(gridWrap);
+  datesInPeriod.forEach((ds) => gridWrap.appendChild(renderDayBlock(ds)));
+  entriesCard.appendChild(gridWrap);
+  wrap.appendChild(entriesCard);
 
-  // Summary
+  // ── Summary card
   wrap.appendChild(renderSummary());
 
-  // Action row
-  const genBtn = el('button', {id:'gen-btn', className:'btn btn-gen', onClick: onGenerate}, S('btn-generate'));
-  const valBtn = el('button', {className:'btn btn-validate', onClick: () => {
+  // ── Signature card
+  renderSignatureArea(wrap);
+
+  // ── Action row
+  const genBtn = el('button', {id:'gen-btn', className:'kb-btn kb-btn--primary kb-btn--lg', onClick: onGenerate});
+  genBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>${S('btn-generate')}`;
+
+  const valBtn = el('button', {className:'kb-btn kb-btn--soft', onClick: () => {
     validationResult = runValidation();
     renderValBox(valBox);
-    if (!validationResult.errors.length && !validationResult.warnings.length) {
-      valBox.innerHTML = '';
-    }
+    if (!validationResult.errors.length && !validationResult.warnings.length) valBox.innerHTML = '';
     updateGenBtn(genBtn);
-    // Refresh inline messages in all day blocks
     $$('.day-block').forEach(block => {
       const ds = block.id.replace('day-', '');
       renderDayValMessages(block, ds);
     });
   }}, S('btn-validate'));
 
-  updateGenBtn(genBtn);
-  wrap.appendChild(el('div', {className:'action-row'}, [valBtn, el('span', {className:'spacer'}), genBtn]));
+  const newBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', onClick: onNewTimesheet}, S('btn-new'));
 
-  renderSignatureArea(wrap);
+  updateGenBtn(genBtn);
+  const actRow = el('div', {className:'kb-actions'});
+  actRow.append(newBtn, el('div', {className:'spacer'}), valBtn, genBtn);
+  wrap.appendChild(actRow);
 
   app.appendChild(wrap);
 }
 
 function updateGenBtn(btn) {
-  if (validationResult && validationResult.errors.length > 0) {
-    btn.disabled = true;
-  } else {
-    btn.disabled = false;
-  }
+  btn.disabled = !!(validationResult && validationResult.errors.length > 0);
 }
 
 function renderValBox(box) {
@@ -845,24 +1181,25 @@ function renderValBox(box) {
   if (!validationResult) return;
   const {errors, warnings} = validationResult;
   if (!errors.length && !warnings.length) return;
-  const hasErrors = errors.length > 0;
-  const hasWarnings = warnings.length > 0;
-  const cls = hasErrors && hasWarnings ? 'val-summary has-both' : hasErrors ? 'val-summary has-errors' : 'val-summary has-warnings';
-  const div = el('div', {className: cls});
-  if (hasErrors) {
-    div.appendChild(el('div', {style:{fontWeight:'700',marginBottom:'4px'}}, hasErrors ? '⛔ Errors (must fix before generating):' : ''));
-    errors.forEach(e => {
-      const d = el('div', {className:'err-line'}); d.textContent = '• ' + e; div.appendChild(d);
-    });
+
+  if (errors.length) {
+    const note = el('div', {className:'kb-note kb-note--error'});
+    const icon = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>`;
+    const inner = el('div');
+    inner.innerHTML = `<b>${state.lang === 'vi' ? 'Lỗi — cần sửa trước khi tạo:' : 'Errors — fix before generating:'}</b><ul>${errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    note.innerHTML = icon;
+    note.appendChild(inner);
+    box.appendChild(note);
   }
-  if (hasWarnings) {
-    if (hasErrors) div.appendChild(el('div', {style:{marginTop:'8px',fontWeight:'700',marginBottom:'4px'}}, '⚠ Warnings:'));
-    else div.appendChild(el('div', {style:{fontWeight:'700',marginBottom:'4px'}}, '⚠ Warnings:'));
-    warnings.forEach(w => {
-      const d = el('div', {className:'warn-line'}); d.textContent = '• ' + w; div.appendChild(d);
-    });
+  if (warnings.length) {
+    const note = el('div', {className:'kb-note kb-note--warning'});
+    const icon = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>`;
+    const inner = el('div');
+    inner.innerHTML = `<b>${state.lang === 'vi' ? 'Cảnh báo:' : 'Warnings:'}</b><ul>${warnings.map(w=>`<li>${w}</li>`).join('')}</ul>`;
+    note.innerHTML = icon;
+    note.appendChild(inner);
+    box.appendChild(note);
   }
-  box.appendChild(div);
 }
 
 function renderDayBlock(dateStr) {
@@ -875,58 +1212,40 @@ function redrawDayBlock(block, dateStr) {
   block.innerHTML = '';
   const rows = state.days[dateStr] || [];
   const totalRows = rows.length;
-
   rows.forEach((row, i) => {
-    const isFirst = i === 0;
-    const isLast  = i === totalRows - 1;
-    block.appendChild(renderRow(dateStr, i, row, isFirst, isLast, totalRows));
+    block.appendChild(renderRow(dateStr, i, row, i === 0, i === totalRows - 1, totalRows));
   });
-
   renderDayValMessages(block, dateStr);
 }
 
 function renderDayValMessages(block, dateStr) {
-  const old = block.querySelector('.day-val');
+  const old = block.querySelector('.ts-day-val');
   if (old) old.remove();
   if (!validationResult || !validationResult.byDate[dateStr]) return;
   const { errors, warnings } = validationResult.byDate[dateStr];
   if (!errors.length && !warnings.length) return;
-
-  // Match background of the first row in this day
-  const firstRow = block.querySelector('.ts-row');
-  const bg = firstRow ? firstRow.style.background : '';
-
-  const div = el('div', {className: 'day-val'});
-  if (bg) div.style.background = bg;
-  errors.forEach(msg => {
-    const d = el('div', {className: 'err-line'});
-    d.textContent = '⚠ ' + msg;
-    div.appendChild(d);
-  });
-  warnings.forEach(msg => {
-    const d = el('div', {className: 'warn-line'});
-    d.textContent = '⚠ ' + msg;
-    div.appendChild(d);
-  });
+  const div = el('div', {className:'ts-day-val'});
+  errors.forEach(msg => { const d = el('div'); d.textContent = '⚠ ' + msg; div.appendChild(d); });
+  warnings.forEach(msg => { const d = el('div', {className:'warn'}); d.textContent = '⚠ ' + msg; div.appendChild(d); });
   block.appendChild(div);
 }
 
 function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   const locked = isRowLocked(dateStr, rowIndex, row);
   const timeLocked = locked && totalRows === 1;
-  const rowEl = el('div', {className: 'ts-row' + (isFirst ? '' : ' continuation')});
+  const rowEl = el('div', {className: 'ts-row2' + (isFirst ? '' : ' continuation')});
 
   // Date cell
-  const dateCellEl = el('div', {className:'col-date-cell'});
+  const dateCellEl = el('div', {className:'ts-date'});
   if (isFirst) {
     dateCellEl.appendChild(document.createTextNode(fmtDate(dateStr, state.lang)));
-    dateCellEl.appendChild(el('br'));
-    dateCellEl.appendChild(el('span', {className:'dow'}, fmtDow(dateStr, state.lang)));
+    const dowSpan = el('span', {className:'dow'}, fmtDow(dateStr, state.lang));
+    dateCellEl.appendChild(dowSpan);
   }
   rowEl.appendChild(dateCellEl);
 
   // Time In
-  const timeInEl = el('input', {type:'time', value: row.timeIn || '', ...(timeLocked ? {disabled:''} : {})});
+  const timeInEl = el('input', {type:'time', className:'kb-input', value: row.timeIn || '', ...(timeLocked ? {disabled:''} : {})});
   timeInEl.addEventListener('change', () => {
     row.timeIn = timeInEl.value;
     updateHoursCell(rowEl, row);
@@ -936,7 +1255,7 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   rowEl.appendChild(timeInEl);
 
   // Time Out
-  const timeOutEl = el('input', {type:'time', value: row.timeOut || '', ...(timeLocked ? {disabled:''} : {})});
+  const timeOutEl = el('input', {type:'time', className:'kb-input', value: row.timeOut || '', ...(timeLocked ? {disabled:''} : {})});
   timeOutEl.addEventListener('change', () => {
     row.timeOut = timeOutEl.value;
     updateHoursCell(rowEl, row);
@@ -946,16 +1265,12 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   rowEl.appendChild(timeOutEl);
 
   // Code dropdown
-  const codeEl = el('select', {disabled: locked ? '' : null});
+  const codeEl = el('select', {className:'kb-select', ...(locked ? {disabled:''} : {})});
   if (!locked) {
-    // For continuation rows, allow any code for the employee type
-    // Weekend/NON can't be user-selected
     const available = codesForType(state.empType);
     if (!row.code) codeEl.appendChild(el('option', {value:''}, ''));
-    // For unlocked weekend rows, offer a way to revert (WEEKEND is not a real config code)
     if (row._locked && !isWorkday(dateStr)) {
-      const wkLabel = state.lang === 'vi' ? 'Cuối tuần' : 'Weekend';
-      codeEl.appendChild(el('option', {value:'__WEEKEND__'}, wkLabel));
+      codeEl.appendChild(el('option', {value:'__WEEKEND__'}, state.lang === 'vi' ? 'Cuối tuần' : 'Weekend'));
     }
     available.forEach(c => {
       const dispKey = `display-${state.lang}`;
@@ -969,21 +1284,14 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
       const becomesLocked = revert || (newCObj && newCObj.lockstate === 'locked');
       row.code = revert ? 'WEEKEND' : newCode;
       if (becomesLocked) {
-        if (revert || !newCObj || !newCObj.counthours) {
-          row.timeIn  = '';
-          row.timeOut = '';
-        } else {
-          row.timeIn  = workStart();
-          row.timeOut = workEnd();
-        }
+        if (revert || !newCObj || !newCObj.counthours) { row.timeIn = ''; row.timeOut = ''; }
+        else { row.timeIn = workStart(); row.timeOut = workEnd(); }
         row.desc = '';
         row._locked = true;
-        const uk = rowKey(dateStr, rowIndex);
-        delete state.unlocks[uk];
+        delete state.unlocks[rowKey(dateStr, rowIndex)];
         const block = $(`#day-${dateStr}`);
         if (block) redrawDayBlock(block, dateStr);
       } else {
-        // Auto-fill work hours if code counts hours
         if (newCObj && newCObj.counthours) {
           if (!row.timeIn)  { row.timeIn  = workStart(); timeInEl.value  = row.timeIn; }
           if (!row.timeOut) { row.timeOut = workEnd();   timeOutEl.value = row.timeOut; }
@@ -996,7 +1304,6 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
       refreshSummary();
     });
   } else {
-    // Locked: show display name
     const cObj = codeObj(row.code);
     if (row.code === 'WEEKEND') {
       codeEl.appendChild(el('option', {value:'WEEKEND'}, state.lang === 'vi' ? 'Cuối tuần' : 'Weekend'));
@@ -1010,93 +1317,69 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
   rowEl.appendChild(codeEl);
 
   // Description
-  const descEl = el('input', {type:'text', value: row.desc || '', ...(locked ? {disabled:''} : {})});
+  const descEl = el('input', {type:'text', className:'kb-input', value: row.desc || '', ...(locked ? {disabled:''} : {})});
   updateDescHint(descEl, row);
   descEl.addEventListener('input', () => { row.desc = descEl.value; scheduleAutoSave(); });
   rowEl.appendChild(descEl);
 
   // Hours
-  const hoursEl = el('div', {className:'col-hours-cell', id:`hrs-${dateStr}-${rowIndex}`});
+  const hoursEl = el('div', {className:'ts-hours kb-mono', id:`hrs-${dateStr}-${rowIndex}`});
   const mins = calcRowMins(row);
   hoursEl.textContent = (mins != null && mins > 0) ? fmtHM(mins) : '';
   rowEl.appendChild(hoursEl);
 
-  // Action button (+ or -)
-  const actionEl = el('div', {className:'row-actions'});
-  if (isLast) {
-    const addBtn = el('button', {type:'button', className:'btn-add-row', title:'Add row'}, '+');
-    addBtn.addEventListener('click', () => {
-      const rows = state.days[dateStr];
-      rows.push({ code: '', timeIn: '', timeOut: '', desc: '', _locked: false });
-      const block = $(`#day-${dateStr}`);
-      if (block) redrawDayBlock(block, dateStr);
-      refreshSummary();
-      scheduleAutoSave();
-    });
-    actionEl.appendChild(addBtn);
-  } else if (!isFirst) {
-    // continuation non-last: show minus
-    const rmBtn = el('button', {type:'button', className:'btn-rm-row', title:'Remove row'}, '−');
+  // Action buttons
+  const actionEl = el('div', {className:'ts-actions'});
+  if (isLast && !isFirst) {
+    const rmBtn = el('button', {type:'button', className:'kb-circbtn kb-circbtn--rm', title:'Remove row'}, '−');
     rmBtn.addEventListener('click', () => {
       state.days[dateStr].splice(rowIndex, 1);
       const block = $(`#day-${dateStr}`);
       if (block) redrawDayBlock(block, dateStr);
-      refreshSummary();
-      scheduleAutoSave();
+      refreshSummary(); scheduleAutoSave();
     });
     actionEl.appendChild(rmBtn);
   }
-  // Last continuation row (not first) should show both minus. Actually spec: [−] on all continuation rows, [+] only on last row.
-  // For the last continuation row, we already added [+]. We need [−] too if it's a continuation.
-  if (isLast && !isFirst) {
-    // Replace with dual buttons
-    actionEl.innerHTML = '';
-    const rmBtn2 = el('button', {type:'button', className:'btn-rm-row', title:'Remove row', style:{marginRight:'2px'}}, '−');
-    rmBtn2.addEventListener('click', () => {
+  if (isLast) {
+    const addBtn = el('button', {type:'button', className:'kb-circbtn', title:'Add row'}, '+');
+    addBtn.addEventListener('click', () => {
+      state.days[dateStr].push({ code: '', timeIn: '', timeOut: '', desc: '', _locked: false });
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      refreshSummary(); scheduleAutoSave();
+    });
+    actionEl.appendChild(addBtn);
+  } else if (!isFirst) {
+    const rmBtn = el('button', {type:'button', className:'kb-circbtn kb-circbtn--rm', title:'Remove row'}, '−');
+    rmBtn.addEventListener('click', () => {
       state.days[dateStr].splice(rowIndex, 1);
       const block = $(`#day-${dateStr}`);
       if (block) redrawDayBlock(block, dateStr);
-      refreshSummary();
-      scheduleAutoSave();
+      refreshSummary(); scheduleAutoSave();
     });
-    const addBtn2 = el('button', {type:'button', className:'btn-add-row', title:'Add row'}, '+');
-    addBtn2.addEventListener('click', () => {
-      const rows = state.days[dateStr];
-      rows.push({ code: '', timeIn: '', timeOut: '', desc: '', _locked: false });
-      const block = $(`#day-${dateStr}`);
-      if (block) redrawDayBlock(block, dateStr);
-      refreshSummary();
-      scheduleAutoSave();
-    });
-    actionEl.append(rmBtn2, addBtn2);
+    actionEl.appendChild(rmBtn);
   }
   rowEl.appendChild(actionEl);
 
-  // Unlock checkbox (only for locked rows that haven't been unlocked yet)
-  if (row._locked) {
-    const unlockKey = rowKey(dateStr, rowIndex);
-    if (!state.unlocks[unlockKey]) {
-      const unlockWrap = el('label', {className:'unlock-wrap', title: S('unlock-label')});
-      const chk = el('input', {type:'checkbox'});
-      chk.addEventListener('change', () => {
-        if (chk.checked) {
-          state.unlocks[unlockKey] = true;
-          const defCode = CFG['default-work-code'] || 'REG';
-          const wstart = workStart();
-          const wend   = workEnd();
-          row.code   = defCode;
-          row.timeIn  = wstart;
-          row.timeOut = wend;
-        } else {
-          delete state.unlocks[unlockKey];
-        }
-        const block = $(`#day-${dateStr}`);
-        if (block) redrawDayBlock(block, dateStr);
-        scheduleAutoSave();
-      });
-      unlockWrap.append(chk, S('unlock-label'));
-      rowEl.appendChild(unlockWrap);
-    }
+  // Unlock checkbox
+  if (row._locked && !state.unlocks[rowKey(dateStr, rowIndex)]) {
+    const unlockWrap = el('label', {className:'ts-unlock', title: S('unlock-label')});
+    const chk = el('input', {type:'checkbox'});
+    chk.addEventListener('change', () => {
+      if (chk.checked) {
+        state.unlocks[rowKey(dateStr, rowIndex)] = true;
+        row.code   = CFG['default-work-code'] || 'REG';
+        row.timeIn  = workStart();
+        row.timeOut = workEnd();
+      } else {
+        delete state.unlocks[rowKey(dateStr, rowIndex)];
+      }
+      const block = $(`#day-${dateStr}`);
+      if (block) redrawDayBlock(block, dateStr);
+      scheduleAutoSave();
+    });
+    unlockWrap.append(chk, S('unlock-label'));
+    rowEl.appendChild(unlockWrap);
   }
 
   applyRowColour(rowEl, dateStr, row, rowIndex, totalRows);
@@ -1105,53 +1388,46 @@ function renderRow(dateStr, rowIndex, row, isFirst, isLast, totalRows) {
 
 function updateDescHint(descEl, row) {
   const cObj = codeObj(row.code);
-  if (cObj) {
-    const hintKey = `hint-${state.lang}`;
-    descEl.placeholder = cObj[hintKey] || cObj['hint-en'] || '';
-  } else {
-    descEl.placeholder = '';
-  }
+  descEl.placeholder = cObj ? (cObj[`hint-${state.lang}`] || cObj['hint-en'] || '') : '';
 }
 
 function updateHoursCell(rowEl, row) {
   const mins = calcRowMins(row);
-  const hEl = rowEl.querySelector('.col-hours-cell');
+  const hEl = rowEl.querySelector('.ts-hours');
   if (hEl) hEl.textContent = (mins != null && mins > 0) ? fmtHM(mins) : '';
 }
 
 function refreshSummary() {
-  const existing = $('#summary-block');
+  const existing = $('#summary-card');
   if (existing) existing.replaceWith(renderSummary());
 }
 
 function renderSummary() {
   const {codeTotals, grandMins} = computeTotals();
-  const block = el('div', {className:'summary-block', id:'summary-block'});
+  const card = el('div', {className:'kb-card', id:'summary-card'});
+  card.appendChild(el('h2', {className:'kb-card__title'}, state.lang === 'vi' ? 'Tổng kết' : 'Summary'));
+
+  const totals = el('div', {className:'kb-totals kb-totals--fill'});
 
   const decimalHours = (grandMins / 60).toFixed(2);
-
-  block.appendChild(el('div', {className:'summary-row'}, [
-    el('span', {className:'label'}, S('total-hours') + ':'),
-    el('span', {className:'value', style:{color:'var(--accent)',fontSize:'15px'}}, fmtHM(grandMins))
-  ]));
-  block.appendChild(el('div', {className:'summary-row'}, [
-    el('span', {className:'label'}, S('total-hours-decimal') + ':'),
-    el('span', {className:'value'}, decimalHours)
-  ]));
-
-  block.appendChild(el('hr', {className:'summary-divider'}));
 
   const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
   shownCodes.forEach(c => {
     const dispKey = `display-${state.lang}`;
     const disp = c[dispKey] || c['display-en'] || c.code;
-    block.appendChild(el('div', {className:'summary-row'}, [
-      el('span', {className:'label'}, `${S('of-which')} ${disp}:`),
-      el('span', {className:'value'}, fmtHM(codeTotals[c.code] || 0))
-    ]));
+    const row = el('div', {className:'row'});
+    row.append(el('span', {className:'lab'}, `${S('of-which')} ${disp}`), el('span', {className:'val'}, fmtHM(codeTotals[c.code] || 0)));
+    totals.appendChild(row);
   });
 
-  // UNP note
+  const grandRow = el('div', {className:'grand'});
+  grandRow.append(el('span', {className:'lab'}, S('total-hours')), el('span', {className:'val'}, fmtHM(grandMins)));
+  totals.appendChild(grandRow);
+
+  const decRow = el('div', {className:'row'});
+  decRow.append(el('span', {className:'lab'}, S('total-hours-decimal')), el('span', {className:'val'}, decimalHours));
+  totals.appendChild(decRow);
+
   const unpMins = codeTotals['UNP'] || 0;
   if (unpMins > 0 && grandMins > 0) {
     const qty = (1 - unpMins / grandMins).toFixed(6);
@@ -1160,44 +1436,36 @@ function renderSummary() {
       .replace('{x}', fmtHM(unpMins))
       .replace('{y}', fmtHM(grandMins))
       .replace('{q}', qty);
-    const noteDiv = el('div', {className:'summary-note'});
+    const noteDiv = el('div', {className:'note'});
     noteText.split('\n').forEach((line, i) => {
       if (i > 0) noteDiv.appendChild(el('br'));
       noteDiv.appendChild(document.createTextNode(line));
     });
-    block.appendChild(noteDiv);
+    totals.appendChild(noteDiv);
   }
 
-  return block;
+  card.appendChild(totals);
+  return card;
 }
 
 // ========== PERIOD / DAY REGENERATION ==========
 function regenerateDays() {
   if (!state.periodFrom || !state.periodTo) return;
   const newDays = buildDefaultDays(state.periodFrom, state.periodTo, state.empType);
-
-  // Preserve existing row data for dates still in range
   for (const ds of Object.keys(newDays)) {
-    if (state.days[ds]) {
-      newDays[ds] = state.days[ds];
-    }
+    if (state.days[ds]) newDays[ds] = state.days[ds];
   }
   state.days = newDays;
 
   const gridWrap = $('#grid-wrap');
   if (!gridWrap) { render(); return; }
 
-  // Rebuild grid content (preserve header)
-  const header = gridWrap.querySelector('.grid-header');
+  const header = gridWrap.querySelector('.kb-rowhead');
   gridWrap.innerHTML = '';
   if (header) gridWrap.appendChild(header);
 
   const dates = dateRange(state.periodFrom, state.periodTo);
-  dates.forEach((ds, di) => {
-    if (di > 0) gridWrap.appendChild(el('div', {className:'day-divider'}));
-    gridWrap.appendChild(renderDayBlock(ds));
-  });
-
+  dates.forEach(ds => gridWrap.appendChild(renderDayBlock(ds)));
   refreshSummary();
 }
 
@@ -1267,18 +1535,17 @@ async function generatePDF() {
   const sz   = 9;
   const szSm = 8;
   const szLg = 13;
-  const lh    = 14;  // line advance for data rows
-  const hdrLh = 12;  // line advance for header area
+  const lh    = 14;
+  const hdrLh = 12;
 
   const now = new Date();
   const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-  const accent  = parseHexColor(CFG['accent-colour'] || '#1a3a5c');
+  const accent  = parseHexColor(CFG['accent-colour'] || '#2f6fed');
   const black   = rgb(0.13, 0.13, 0.13);
   const gray    = rgb(0.45, 0.45, 0.45);
   const lgray   = rgb(0.65, 0.65, 0.65);
   const lineCol = rgb(0.80, 0.80, 0.80);
-  const white   = rgb(1,1,1);
 
   let logoImage = null;
   if (CFG.logo === true || CFG.logo === 'yes') logoImage = await loadLogo(doc);
@@ -1307,7 +1574,6 @@ async function generatePDF() {
     y -= hdrLh;
   }
 
-  // Column layout: DATE | TIME IN | TIME OUT | CODE | DESCRIPTION | HOURS
   const COL = [0, W*0.14, W*0.24, W*0.34, W*0.47, W*0.90];
   const BORDER_W = 3;
 
@@ -1325,10 +1591,8 @@ async function generatePDF() {
     if (bdr) pg.drawRectangle({x:M.left, y:rectY, width:BORDER_W, height:lh, color:bdr, borderWidth:0});
   }
 
-  // Page 1
   addPage(false);
 
-  // Logo / org name + title on same line
   if (logoImage) {
     const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
     const scale = Math.min(maxW / logoImage.width, 40 / logoImage.height, 1);
@@ -1345,7 +1609,6 @@ async function generatePDF() {
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
   y -= hdrLh;
 
-  // Employee / Period / Type row
   const c1=0, c2=W*0.35, c3=W*0.65;
   pg.drawText(S('pdf-employee').toUpperCase(), {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
   pg.drawText(S('pdf-period').toUpperCase(),   {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
@@ -1354,14 +1617,13 @@ async function generatePDF() {
   pg.drawText(state.employee || '–', {x:M.left+c1, y, size:sz, font:fontBold, color:black});
   pg.drawText(`${state.periodFrom}  –  ${state.periodTo}`, {x:M.left+c2, y, size:sz, font:fontBody, color:black});
   const tObj = empTypeObj(state.empType);
-  const typeDisp = tObj ? ((typeof tObj.display === 'object') ? (tObj.display[state.lang] || tObj.display['en'] || state.empType) : (tObj.display || state.empType)) : state.empType;
-  pg.drawText(typeDisp, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+  const typeDisp2 = tObj ? ((typeof tObj.display === 'object') ? (tObj.display[state.lang] || tObj.display['en'] || state.empType) : (tObj.display || state.empType)) : state.empType;
+  pg.drawText(typeDisp2, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
   y -= hdrLh + 2;
 
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
   y -= hdrLh;
 
-  // Table column headers
   const headers = [S('col-date'), S('col-time-in'), S('col-time-out'), S('col-code'), S('col-description'), S('col-hours')];
   headers.forEach((h, i) => {
     const txt = h.toUpperCase();
@@ -1376,14 +1638,12 @@ async function generatePDF() {
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
   y -= 5;
 
-  // Rows
   const sortedDates = Object.keys(state.days).sort();
   for (let di = 0; di < sortedDates.length; di++) {
     const ds = sortedDates[di];
     const rows = state.days[ds];
     const totalRowsDay = rows.length;
 
-    // Gap between days
     if (di > 0) y -= 3;
 
     for (let ri = 0; ri < rows.length; ri++) {
@@ -1395,7 +1655,6 @@ async function generatePDF() {
       const rowY = y;
       const textColor = isLocked ? lgray : black;
 
-      // Row background + left border
       const cObjRow = row.code && row.code !== 'WEEKEND' ? codeObj(row.code) : null;
       let bgHex = null, borderHex = null;
       if (row.code === 'WEEKEND' || !row.code) {
@@ -1413,7 +1672,6 @@ async function generatePDF() {
 
       const tx = M.left + BORDER_W + 2;
 
-      // Date (only on first row of day)
       if (isFirst) {
         const dateTxt = fmtDate(ds, state.lang);
         const dowTxt  = fmtDow(ds, state.lang);
@@ -1422,11 +1680,9 @@ async function generatePDF() {
         pg.drawText(' ' + dowTxt, {x:tx+COL[0]+dw, y:rowY+2, size:szSm, font:fontBody, color:lgray});
       }
 
-      // Time in / out
       if (row.timeIn)  pg.drawText(row.timeIn,  {x:tx+COL[1], y:rowY+2, size:sz, font:fontBody, color:textColor});
       if (row.timeOut) pg.drawText(row.timeOut, {x:tx+COL[2], y:rowY+2, size:sz, font:fontBody, color:textColor});
 
-      // Code
       if (row.code === 'WEEKEND') {
         pg.drawText(state.lang === 'vi' ? 'Cuối tuần' : 'Weekend', {x:tx+COL[3], y:rowY+2, size:sz, font:fontBody, color:lgray});
       } else if (row.code) {
@@ -1435,11 +1691,9 @@ async function generatePDF() {
         pg.drawText(codeTxt, {x:tx+COL[3], y:rowY+2, size:sz, font:fontBody, color:textColor});
       }
 
-      // Description
       const descMaxW = COL[5] - COL[4] - 4;
       if (row.desc) pg.drawText(truncate(row.desc, fontBody, szSm, descMaxW), {x:tx+COL[4], y:rowY+2, size:szSm, font:fontBody, color:textColor});
 
-      // Hours right-aligned
       const mins = calcRowMins(row);
       if (mins != null && mins > 0) {
         const hStr = fmtHM(mins);
@@ -1451,7 +1705,6 @@ async function generatePDF() {
     }
   }
 
-  // Summary + Signature block — side by side
   const {codeTotals, grandMins} = computeTotals();
   const decHours = (grandMins / 60).toFixed(2);
   const shownCodes = (CFG.codes || []).filter(c => c.counthours && codeTotals[c.code] > 0);
@@ -1466,7 +1719,6 @@ async function generatePDF() {
 
   const blockTopY = y;
 
-  // — RIGHT: summary column —
   const summaryRight = M.left + W;
   function drawSummaryRow(label, value, bold) {
     const vw = (bold ? fontBold : fontBody).widthOfTextAtSize(value, sz);
@@ -1486,10 +1738,6 @@ async function generatePDF() {
 
   const summaryBottomY = y;
 
-  // UNP note (below both columns, full width)
-  const unpMins = codeTotals['UNP'] || 0;
-
-  // — LEFT: signature column —
   if (needsSignature()) {
     let sy = blockTopY;
     const sigImgH = 20;
@@ -1528,6 +1776,7 @@ async function generatePDF() {
     y = Math.min(summaryBottomY, sy - hdrLh);
   }
 
+  const unpMins = codeTotals['UNP'] || 0;
   if (unpMins > 0 && grandMins > 0) {
     y -= 4;
     pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.5, color:lineCol});
@@ -1542,7 +1791,6 @@ async function generatePDF() {
     });
   }
 
-  // Footers — single line, flush against divider
   const totalPages = pages.length;
   pages.forEach((p, i) => {
     const fy = M.bottom - 4;
@@ -1577,7 +1825,7 @@ async function onGenerate() {
     return;
   }
   genBtn.disabled = true;
-  const origText = genBtn.textContent;
+  const origHTML = genBtn.innerHTML;
   genBtn.textContent = S('generating');
   try {
     await generatePDF();
@@ -1586,7 +1834,7 @@ async function onGenerate() {
     console.error(e);
   }
   genBtn.disabled = false;
-  genBtn.textContent = origText;
+  genBtn.innerHTML = origHTML;
 }
 
 // ========== INIT ==========
@@ -1595,13 +1843,14 @@ async function init() {
     await loadConfig();
     loadSignature();
 
-    // Restore preferences
+    const savedScale = localStorage.getItem('ts-fontscale');
+    if (savedScale) document.documentElement.style.setProperty('--font-scale', savedScale);
+
     const savedLang = localStorage.getItem('timesheet-lang');
     const savedEmp  = localStorage.getItem('timesheet-employee');
     const savedType = localStorage.getItem('timesheet-type');
     if (savedLang) state.lang = savedLang;
     if (savedEmp)  state.employee = savedEmp;
-    // Default empType to first configured type if not saved or no longer valid
     const validTypes = (CFG['employee-types'] || []).map(t => t.code);
     if (savedType && validTypes.includes(savedType)) state.empType = savedType;
     else if (validTypes.length) state.empType = validTypes[0];
@@ -1619,9 +1868,8 @@ async function init() {
 
     document.addEventListener('input', scheduleAutoSave);
     document.addEventListener('change', scheduleAutoSave);
-    document.getElementById('footer-about-btn').addEventListener('click', showAboutModal);
   } catch(e) {
-    $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err);padding:40px">Failed to load: ${e.message}</p></div>`;
+    $('#app').innerHTML = `<div class="kb-wrap"><div class="kb-note kb-note--error"><span>⚠</span><div><b>Failed to load</b><br>${e.message}</div></div></div>`;
     console.error(e);
   }
 }
