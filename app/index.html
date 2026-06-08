@@ -137,7 +137,7 @@ body {
 .kb-seg button.is-active { background: var(--accent-soft); color: var(--accent); }
 .kb-seg button:hover:not(.is-active) { color: var(--text); }
 .kb-iconbtn {
-  display: inline-grid; place-items: center; width: 34px; height: 34px;
+  display: inline-grid; place-items: center; width: 32px; height: 32px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;
 }
@@ -162,18 +162,10 @@ body {
 .kb-doctitle h1 svg { flex-shrink: 0; }
 .kb-doctitle .meta { margin-top: 4px; font-size: var(--fs-small); color: var(--text-muted); font-family: var(--font-mono); }
 /* language dropdown in toolbar */
-.kb-toolbar select {
-  font: 600 var(--fs-small)/1 var(--font-sans);
-  color: var(--text-muted); background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 5px 28px 5px 10px; outline: none; cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.8'><path d='M4 6l4 4 4-4'/></svg>");
-  background-repeat: no-repeat; background-position: right 8px center;
-  transition: border-color .14s, color .14s;
-}
-.kb-toolbar select:focus { border-color: var(--accent); box-shadow: var(--ring); color: var(--text); }
-.kb-toolbar select:hover { border-color: var(--accent-border); color: var(--text); }
+.kb-toolbar .kb-select { width: auto; padding: 5px 28px 5px 8px; font-size: var(--fs-small); font-weight: 600; color: var(--text-muted); }
+.kb-toolbar .kb-select:hover { color: var(--text); }
+/* zoom % label next to size buttons */
+.kb-sz-label { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
 .kb-card {
@@ -983,7 +975,7 @@ function render() {
   // ── Toolbar
   const toolbar = el('div', {className:'kb-toolbar'});
 
-  const langSeg = el('select', {'aria-label': 'Language'});
+  const langSeg = el('select', {className:'kb-select', 'aria-label': 'Language'});
   (CFG.languages || [{code:'en', display:'English'}]).forEach(l => {
     langSeg.appendChild(el('option', {value: l.code, ...(state.lang === l.code ? {selected:''} : {})}, l.display));
   });
@@ -994,25 +986,24 @@ function render() {
     render();
   });
 
-  const sizeSeg = el('div', {className:'kb-seg', role:'group'});
-  [['A−', -0.1], ['A', 0], ['A+', 0.1]].forEach(([label, delta]) => {
-    const btn = el('button', {type:'button'}, label);
+  const curScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-scale') || '1') || 1;
+  const szLabel = el('span', {className:'kb-sz-label'}, Math.round(curScale * 100) + '%');
+
+  const sizeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Text size'});
+  [['A−', -1, 'Smaller text'], ['A+', 1, 'Larger text']].forEach(([label, dir, ariaLabel]) => {
+    const btn = el('button', {type:'button', 'aria-label': ariaLabel}, label);
     btn.addEventListener('click', () => {
-      if (delta === 0) {
-        document.documentElement.style.removeProperty('--font-scale');
-        localStorage.removeItem('ts-fontscale');
-      } else {
-        const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-scale') || '1');
-        const nxt = Math.max(0.8, Math.min(1.3, (cur || 1) + delta));
-        document.documentElement.style.setProperty('--font-scale', nxt.toFixed(1));
-        localStorage.setItem('ts-fontscale', nxt.toFixed(1));
-      }
+      const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-scale') || '1') || 1;
+      const nxt = Math.max(0.8, Math.min(1.3, cur + dir * 0.1));
+      document.documentElement.style.setProperty('--font-scale', nxt.toFixed(1));
+      localStorage.setItem('ts-fontscale', nxt.toFixed(1));
+      szLabel.textContent = Math.round(nxt * 100) + '%';
     });
     sizeSeg.appendChild(btn);
   });
 
-  const themeBtn = el('button', {type:'button', className:'kb-iconbtn', 'aria-label':'Toggle theme'});
-  themeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+  const themeBtn = el('button', {type:'button', className:'kb-iconbtn', title:'Toggle light/dark', 'aria-label':'Toggle dark mode'});
+  themeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
   themeBtn.addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme');
     const isDark = cur === 'dark' || (!cur && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1020,10 +1011,10 @@ function render() {
   });
 
   const aboutBtn = el('button', {type:'button', className:'kb-iconbtn', 'aria-label':'About'});
-  aboutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
+  aboutBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
   aboutBtn.addEventListener('click', showAboutModal);
 
-  toolbar.append(langSeg, el('div', {className:'spacer'}), sizeSeg, themeBtn, aboutBtn);
+  toolbar.append(langSeg, el('div', {className:'spacer'}), sizeSeg, szLabel, themeBtn, aboutBtn);
   wrap.appendChild(toolbar);
 
   // ── Document header
