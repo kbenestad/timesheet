@@ -108,30 +108,8 @@ body {
 }
 .kb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* ── App bar ─────────────────────────────────────────────────────────────── */
-.kb-appbar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-  height: 36px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center;
-  padding: 0 20px;
-}
-.kb-appbar__inner {
-  max-width: 980px; width: 100%; margin: 0 auto;
-  display: flex; align-items: center; gap: 8px;
-}
-.kb-appbar__logo {
-  width: 18px; height: 18px; flex-shrink: 0; opacity: 0.82;
-}
-.kb-appbar__name {
-  font-size: 12.5px; font-weight: 500; color: var(--text-muted);
-  letter-spacing: -0.01em; opacity: 0.9;
-}
-
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 .kb-wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 56px; }
-body { padding-top: 36px; }
 
 /* ── Toolbar ────────────────────────────────────────────────────────────── */
 .kb-toolbar {
@@ -289,7 +267,7 @@ body { padding-top: 36px; }
   display: grid;
   align-items: center;
   gap: 6px;
-  grid-template-columns: 108px 96px 96px 108px 1fr 58px 52px;
+  grid-template-columns: 108px 112px 112px 108px 1fr 64px 52px;
 }
 .kb-rowhead {
   padding: 0 10px 8px;
@@ -304,7 +282,7 @@ body { padding-top: 36px; }
 }
 .ts-row2:hover { background: var(--surface-2); }
 .ts-row2.continuation .ts-date { visibility: hidden; }
-.ts-row2 input[type="time"] { font-family: var(--font-mono); }
+.ts-row2 input[type="time"] { font-family: var(--font-mono); padding-right: 4px; }
 .ts-date { font-weight: 600; font-size: var(--fs-small); color: var(--text); white-space: nowrap; }
 .ts-date .dow { display: block; font-weight: 500; font-size: 11px; color: var(--text-muted); }
 .ts-hours { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-small); font-weight: 600; color: var(--text); white-space: nowrap; }
@@ -391,6 +369,8 @@ body { padding-top: 36px; }
 }
 .kb-footer a { color: var(--text-muted); text-decoration: none; }
 .kb-footer a:hover { color: var(--accent); text-decoration: underline; }
+.kb-footer button { color: var(--text-muted); }
+.kb-footer button:hover { color: var(--accent); text-decoration: underline; }
 .kb-footer .sep { opacity: .45; }
 .kb-mark { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-soft); }
 
@@ -416,39 +396,28 @@ body { padding-top: 36px; }
   .ts-row2.continuation .ts-date { display: none; }
 }
 @media print {
-  .kb-appbar { display: none !important; }
-  body { padding-top: 0 !important; }
   .kb-toolbar, .kb-actions, .sig-controls, .kb-footer { display: none !important; }
 }
 </style>
 </head>
 <body>
-<header class="kb-appbar" aria-hidden="true">
-  <div class="kb-appbar__inner">
-    <svg class="kb-appbar__logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="48" height="48" rx="12" fill="var(--accent)"/>
-      <circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="3.2"/>
-      <path d="M24 16 V24 L30 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span class="kb-appbar__name">Timesheet</span>
-  </div>
-</header>
 <div id="app"><p class="kb-loading">Loading configuration…</p></div>
 
 <footer class="kb-footer">
   <span class="kb-mark">
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <rect x="1" y="5" width="11" height="11" rx="3" fill="var(--accent)"/>
-      <rect x="6" y="1" width="11" height="11" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+    <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="var(--accent)"/>
+      <circle cx="24" cy="24" r="13" fill="none" stroke="#fff" stroke-width="3.2"/>
+      <path d="M24 16 V24 L30 27.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    kBenestad
+    timesheet
   </span>
   <span class="sep">·</span>
   <span>© 2026 Kristian Benestad</span>
   <span class="sep">·</span>
-  <a href="https://docs.benestad.net" target="_blank" rel="noopener">docs.benestad.net</a>
-  <span class="sep">·</span>
   <a href="https://github.com/kbenestad/timesheet" target="_blank" rel="noopener">kbenestad/timesheet</a>
+  <span class="sep">·</span>
+  <button id="footer-about-btn" style="background:none;border:none;padding:0;font:inherit;font-size:var(--fs-small);color:var(--text-muted);cursor:pointer;">About</button>
 </footer>
 
 <script>
@@ -1983,6 +1952,7 @@ async function init() {
 
     document.addEventListener('input', scheduleAutoSave);
     document.addEventListener('change', scheduleAutoSave);
+    document.getElementById('footer-about-btn').addEventListener('click', showAboutModal);
   } catch(e) {
     $('#app').innerHTML = `<div class="kb-wrap"><div class="kb-note kb-note--error"><span>⚠</span><div><b>Failed to load</b><br>${e.message}</div></div></div>`;
     console.error(e);
