@@ -235,7 +235,7 @@ body {
 .kb-btn--soft:hover { background: var(--accent); color: var(--on-accent); }
 .kb-btn--dashed { background: transparent; color: var(--accent); border: 1px dashed var(--accent-border); }
 .kb-btn--dashed:hover { background: var(--accent-soft); border-color: var(--accent); }
-.kb-btn--lg { padding: 12px 24px; font-size: calc(15px * var(--font-scale)); }
+.kb-btn--lg { padding: 13px 26px; }
 .kb-circbtn {
   width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center;
   font-size: 15px; line-height: 1; font-weight: 700; cursor: pointer; padding: 0;
@@ -336,10 +336,7 @@ body {
 /* ── Action row ─────────────────────────────────────────────────────────── */
 .kb-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
 .kb-actions .spacer { flex: 1; }
-/* Bottom action bar: Save 20% | Validate 20% | Download 60% */
 .kb-actbar { display: flex; gap: 10px; margin-top: 8px; }
-.kb-actbar .kb-btn { flex: 2; }
-.kb-actbar .kb-btn--primary { flex: 6; }
 
 /* ── Modal ──────────────────────────────────────────────────────────────── */
 .kb-overlay {
@@ -1158,10 +1155,10 @@ function render() {
   renderSignatureArea(wrap);
 
   // ── Action row
-  const genBtn = el('button', {id:'gen-btn', className:'kb-btn kb-btn--primary kb-btn--lg', onClick: onGenerate});
-  genBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>${state.lang === 'vi' ? 'Tải xuống bảng chấm công' : 'Download Timesheet'}`;
+  const genBtn = el('button', {id:'gen-btn', type:'button', className:'kb-btn kb-btn--primary kb-btn--lg', style:{flex:'6'}, onClick: onGenerate});
+  genBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 2v9m0 0 4-4M8 11 4 7"/><line x1="2" y1="14" x2="14" y2="14"/></svg>${state.lang === 'vi' ? 'Tải xuống bảng chấm công' : 'Download Timesheet'}`;
 
-  const valBtn = el('button', {className:'kb-btn kb-btn--soft', onClick: () => {
+  const valBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost kb-btn--lg', style:{flex:'2'}, onClick: () => {
     validationResult = runValidation();
     renderValBox(valBox);
     if (!validationResult.errors.length && !validationResult.warnings.length) valBox.innerHTML = '';
@@ -1172,7 +1169,7 @@ function render() {
     });
   }}, S('btn-validate'));
 
-  const saveBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', onClick: () => {
+  const saveBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost kb-btn--lg', style:{flex:'2'}, onClick: () => {
     saveState();
     saveBtn.textContent = state.lang === 'vi' ? 'Đã lưu ✓' : 'Saved ✓';
     setTimeout(() => { saveBtn.textContent = state.lang === 'vi' ? 'Lưu' : 'Save'; }, 1500);
